@@ -15,11 +15,22 @@ It is the second dialect in this class. The first is [L0177](https://github.com/
 
 > **Early.** One operation is modelled — `itembank/items` + `get`, the Item bank read. The other 56 documented `(endpoint, action)` blocks are listed in [`packages/core/spec/coverage.md`](packages/core/spec/coverage.md) and are unbuilt, not unsupported.
 >
-> **No fact in this repo has been verified against a live Learnosity consumer.** Everything is read off the published reference and is marked documented rather than confirmed. `spec/instructions.md` states the convention and holds to it.
+> **Paging and transport are verified** against Learnosity's public demo Item bank (2026-08-13, `learnosity-sdk-nodejs` 0.7.0, `v2025.2.LTS`). Everything else is read off the published reference and marked documented rather than confirmed. `spec/instructions.md` states the convention and holds to it — and a fact verified on the demo bank describes the mechanism, not your consumer.
 
 ## The failure this exists to prevent
 
 A **truncated read**. Ask the Data API for a result set larger than one page and you get HTTP 200, `meta.status: true`, and a well-formed `data` array — and `meta.records` counts the page you got, not the total that matched. Nothing about a short answer looks wrong.
+
+Measured, not assumed. Over 12 consecutive pages at `limit: 2`, `meta.records` read `2` every single time while 24 distinct Items came back:
+
+```
+page  1 | data.length  2 | meta.records  2 | next 1786606673.368656799
+page  2 | data.length  2 | meta.records  2 | next 1786606660.368656785
+…
+page 12 | data.length  2 | meta.records  2 | next 1786567051.368554338
+```
+
+Worse, **a `limit` above the maximum is silently clamped**. Asking for `limit: 100` returns 50 records with `meta.status: true` and no error, so *every* page looks short while `meta.next` is present throughout — and the loop most developers write, "stop when `data.length < limit`", quits after one page and discards the rest.
 
 That is why a paged job is **incomplete** until it declares how far it reads:
 

@@ -139,9 +139,14 @@ describe("per-field validation", () => {
     expect(hasWarning(out, '"published"')).toBe(true);
   });
 
-  test("limit above the documented maximum warns", async () => {
+  test("limit above the maximum warns that it is silently clamped", async () => {
+    // Measured against the demo bank: limit 100 returns 50 with meta.status true and no
+    // error. The warning has to carry that, because "exceeds the maximum" reads like the
+    // request will be rejected — and it is the silence that causes the data loss.
     const out = await compile(`data-job paging EXHAUSTIVE items-get [ limit 500 {} ] {}..`);
-    expect(hasWarning(out, "exceeds the documented maximum of 50")).toBe(true);
+    expect(hasWarning(out, "exceeds the maximum of 50")).toBe(true);
+    expect(hasWarning(out, "silently clamps")).toBe(true);
+    expect(hasWarning(out, "every page looks short")).toBe(true);
   });
 
   test("a wrong value type warns", async () => {
@@ -231,7 +236,7 @@ describe("progressive disclosure", () => {
   test("validity warnings surface even while a hole is open", async () => {
     const out = await compile(`data-job items-get [ limit 500 {} ] {}..`);
     expect(out.complete).toBe(false);
-    expect(hasWarning(out, "exceeds the documented maximum")).toBe(true);
+    expect(hasWarning(out, "exceeds the maximum")).toBe(true);
   });
 
   test("an unspecified bank is advised once the design is otherwise complete", async () => {

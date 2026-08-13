@@ -8,7 +8,7 @@ Output these sections, in this order, as Markdown.
 ## Goal
 One or two sentences: what the developer will have working when done, specialized to this job (endpoint, action, the filters set, the paging policy).
 
-- State only what the procedure achieves. **Nothing in this dialect is verified against a live consumer** — every fact is read off Learnosity's published reference. Where a claim would change what the reader does if it were wrong, say it is documented rather than confirmed.
+- State only what the procedure achieves. The paging and transport behaviour was **measured against Learnosity's public demo Item bank**; everything else is read off the published reference. Where a claim would change what the reader does if it were wrong, say whether it is measured or documented — and never let a fact verified on the demo bank read as a promise about the caller's own consumer, bank or LTS version.
 - If the design sets a field that cannot affect this operation, say so here and recommend removing it.
 
 ## Preconditions
@@ -30,15 +30,18 @@ Three details are binary and must be stated exactly:
 - State the design's declared policy (`paging` in the output) and write the procedure for THAT policy.
 - For `exhaustive`: loop — issue the request, process `data`, and if `meta.next` is present, re-issue **the original request parameters plus the new `next` token**. Terminate ONLY on the absence of `meta.next`.
 - For `single-page`: state plainly, in the recipe, that the result is not the full match set and that nothing in the response says so.
-- **Always state that `meta.records` counts the page, not the total.** This is the single most important sentence in the recipe. A reader who takes `records` as a total has a number that looks like an answer and is not one.
-- **Never present a terminating loop as self-evidently correct.** Say what a wrong loop looks like: stopping on a short page, stopping when `records < limit`, or re-deriving the request between pages instead of carrying the original parameters forward.
+- **Always state that `meta.records` counts the page, not the total.** This is the single most important sentence in the recipe. A reader who takes `records` as a total has a number that looks like an answer and is not one. Measured: `meta.records` read `2` on every one of 12 consecutive pages while 24 distinct Items came back.
+- **Terminate on the ABSENCE of `meta.next`, never on a page's size** — and say why, because "stop when the page is short" is the loop most developers write. An over-limit request is **silently clamped**: asking for `limit: 100` returns 50 records, HTTP 200, `meta.status: true`, no error and no indication the limit changed. Every page then looks short while `meta.next` is present throughout, so a size-based loop quits after one page and discards the rest. State this whenever the design's `limit` exceeds the documented maximum, and state it as measured behaviour rather than as a caution.
+- **Never present a terminating loop as self-evidently correct.** Name the wrong loops explicitly: stopping when `data.length < limit`, stopping on `meta.records`, or re-deriving the request between pages instead of carrying the original parameters forward.
 
 ## Gotchas
 The mistakes that produce a wrong answer rather than an error, for THIS job. Always include:
 - **A truncated read looks exactly like a complete one** — HTTP 200, `meta.status: true`, a well-formed `data` array. There is no error to catch.
-- **`meta.status` is separate from the HTTP status.** Checking only the HTTP code misses an API-level failure.
+- **`meta.status` is separate from the HTTP status.** Checking only the HTTP code misses an API-level failure. Log `meta.code`, `meta.message` and `meta.request_uuid` — support asks for the uuid.
+- **Not every response is JSON.** Dropping the LTS version from the URL returns a 404 whose body is plain text, so code that calls `.json()` unconditionally throws a parse error and sends the developer to debug their JSON handling instead of their URL. Check the status before parsing.
+- **A 41003 says the signature did not match, and its message is misleading here** — it advises comparing `security.domain` to the browser's `location.hostname`, and there is no browser in a server-to-server call. Point the reader at the consumer secret and the request serialization instead.
 - **Rate limits are per endpoint, over a 5-second window**, and exhausting a large result set is a burst against a single endpoint. On a 429 (`meta.code` 42000) wait the full window; account for other processes sharing the consumer key.
-- **403 can mean HTTP instead of HTTPS**, not only bad credentials — so "check your keys" is incomplete advice.
+- **`meta.versions` reports what actually served the request** (`requested`, `mapped`, `concrete`) — the pinned LTS string is not the running version. Log it; it is what makes "it worked last month" diagnosable.
 
 ## Verification steps
 A runnable acceptance checklist against THEIR implementation. **Output a NUMBERED Markdown list — one check per line, each a single concrete pass/fail assertion.** Never a paragraph. Include at least one negative check.

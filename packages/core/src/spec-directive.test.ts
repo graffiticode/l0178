@@ -40,9 +40,17 @@ describe("the directive keeps paging as its own section", () => {
     expect(has(instructions, "counts the CURRENT PAGE, not the total match set")).toBe(true);
   });
 
-  test("it terminates the loop on the ABSENCE of meta.next, not on a short page", () => {
+  test("it terminates the loop on the ABSENCE of meta.next, never on page size", () => {
     expect(has(directive, "Terminate ONLY on the absence of")).toBe(true);
-    expect(has(directive, "stopping on a short page")).toBe(true);
+    expect(has(directive, "never on a page's size")).toBe(true);
+    expect(has(directive, "stopping when data.length < limit")).toBe(true);
+  });
+
+  test("it carries the measured clamp, which is what makes a size-based loop fail", () => {
+    // limit 100 -> 50 records, HTTP 200, no error. Every page then looks short while
+    // meta.next is present throughout, so "stop on a short page" drops the rest.
+    expect(has(directive, "silently clamped")).toBe(true);
+    expect(has(directive, "quits after one page and discards the rest")).toBe(true);
   });
 
   test("it requires the original request parameters to be carried between pages", () => {
@@ -99,10 +107,20 @@ describe("the envelope and its traps", () => {
     expect(has(directive, "truncated read looks exactly like a complete one")).toBe(true);
   });
 
-  test("403 is not only a credentials problem", () => {
-    // "Check your keys" is incomplete advice: HTTP-instead-of-HTTPS returns 403 too.
-    expect(has(directive, "403 can mean HTTP instead of HTTPS")).toBe(true);
-    expect(has(instructions, "instead of HTTPS")).toBe(true);
+  test("41003's own error message is flagged as misleading for this API", () => {
+    // Measured: a bad secret returns 403/41003 whose message tells you to compare
+    // security.domain with the browser's location.hostname. There is no browser here.
+    expect(has(directive, "its message is misleading here")).toBe(true);
+    expect(has(instructions, "There is no browser in a Data API call")).toBe(true);
+  });
+
+  test("not every response is JSON, and the directive says so", () => {
+    expect(has(directive, "Not every response is JSON")).toBe(true);
+    expect(has(instructions, "body is NOT JSON")).toBe(true);
+  });
+
+  test("the unreproduced HTTP-vs-HTTPS claim is marked unresolved, not asserted", () => {
+    expect(has(instructions, "did not reproduce and is UNRESOLVED")).toBe(true);
   });
 
   test("rate limits are per endpoint over a 5-second window", () => {
@@ -154,12 +172,14 @@ describe("honesty about evidence", () => {
     expect(has(instructions, "exercised END TO END")).toBe(true);
   });
 
-  test("instructions state plainly that nothing here is verified yet", () => {
-    expect(has(instructions, "Everything in this file today is [documented]")).toBe(true);
+  test("verified facts carry their provenance", () => {
+    expect(has(instructions, "public demo")).toBe(true);
+    expect(has(instructions, "learnosity-sdk-nodejs")).toBe(true);
   });
 
-  test("the directive tells the recipe not to outrun its evidence", () => {
-    expect(has(directive, "Nothing in this dialect is verified against a live consumer")).toBe(true);
+  test("a demo-bank verification is not overstated as a promise to the reader", () => {
+    expect(has(instructions, "verified for the DEMO ITEM BANK")).toBe(true);
+    expect(has(directive, "never let a fact verified on the demo bank read as a promise")).toBe(true);
   });
 
   test("the 'no holes, nothing left to do' trap is closed", () => {

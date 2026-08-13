@@ -101,7 +101,12 @@ function validateProp(
   if (type === "number") {
     if (typeof value !== "number") pushWarn(options, `${name} must be a number.`);
     else if (c?.max !== undefined && value > c.max) {
-      pushWarn(options, `${name}: ${value} exceeds the documented maximum of ${c.max}.`);
+      // Measured, not merely documented: the API CLAMPS rather than rejects. A limit of
+      // 100 returns 50 records with meta.status true and no error — so every page then
+      // looks short, and a loop that stops when data.length < limit quits after one page
+      // while meta.next was present the whole time. That is why this is worth a warning
+      // at all: the request succeeds, and the damage is silent.
+      pushWarn(options, `${name}: ${value} exceeds the maximum of ${c.max}. Learnosity silently clamps it — the request succeeds and returns ${c.max} records with no error, so every page looks short and a loop that stops on a short page will drop the rest. Set ${name} to ${c.max} or less and terminate on the absence of meta.next.`);
     }
   } else if (type === "string") {
     if (typeof value !== "string") pushWarn(options, `${name} must be a string.`);

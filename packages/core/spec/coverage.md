@@ -6,10 +6,19 @@ This is the **denominator**. L0177's credibility rests on being able to say ever
 was cross-checked against the published reference, and that sentence is only available against a
 known total. This file is that total, so each slice L0178 builds can report progress against it.
 
-It is a map, not knowledge. Everything here is read off Learnosity's published reference — see
-"Provenance" below — and **nothing in it is verified**. It records the shape of the API, not how
-the API behaves. The un-written tricks that make this dialect worth having are, by definition,
-not in the documentation; they come from building and running.
+It is a map, not knowledge. Everything in the TABLE below is read off Learnosity's published
+reference — see "Provenance" — and **none of the table is verified**. It records the shape of the
+API, not how the API behaves.
+
+That distinction has already paid out. `itembank/items` + `get` was afterwards exercised against
+the live demo Item bank, and the run produced two facts the reference does not state: a `limit`
+above the documented maximum is **silently clamped** rather than rejected, and the response
+envelope carries a `meta.versions` object. Both are in `instructions.md` marked `[verified]`. The
+un-written tricks that make this dialect worth having are, by definition, absent from the
+documentation — this map tells you where to go looking, never what you will find there.
+
+**Coverage against this denominator: 1 of 57 blocks built** (`itembank/items` + `get`), and 1 of
+57 verified against a live consumer.
 
 ## Totals
 

@@ -39,10 +39,28 @@ recipe covering signing, paging, the response envelope, and verification.
 
 **Status: early.** One operation is modelled — `itembank/items` + `get` (`items-get`). The
 other 56 documented blocks are in `spec/coverage.md` and are unbuilt, not unsupported; an
-operation absent from the vocabulary must never be guessed at. **No fact in this repo has
-been verified against a live consumer** — everything is read off Learnosity's published
-reference and marked documented, not confirmed. `spec/instructions.md` states the evidence
-convention; read its header before adding a fact.
+operation absent from the vocabulary must never be guessed at.
+
+**Paging and transport are [verified]** against Learnosity's public demo Item bank
+(2026-08-13, `learnosity-sdk-nodejs` 0.7.0, `v2025.2.LTS`). Everything else is read off the
+published reference and marked [documented]. `spec/instructions.md` states the evidence
+convention; read its header before adding a fact, and do not promote a claim without
+saying what exercised it.
+
+### Measured behaviour that shapes the code
+
+- **`meta.records` counts the page, not the total** — `2` on every one of 12 consecutive
+  pages at `limit: 2`, while 24 distinct Items came back.
+- **`meta.next` is absent exactly at exhaustion**, and is the only end-of-data signal.
+- **`limit` over the maximum is SILENTLY CLAMPED** — `limit: 100` returns 50 records, HTTP
+  200, `meta.status: true`, no error. This composes into a data-loss bug: every page then
+  looks short while `meta.next` is present, so a "stop on a short page" loop quits after
+  one page. It is why the `limit` warning in `compiler.ts` says *silently clamps* rather
+  than *exceeds the maximum* — the latter reads like the request would be rejected.
+- **Not every response is JSON.** An unversioned URL returns a 404 with a plain-text body,
+  so unconditional `.json()` throws a parse error and misdirects the debugging.
+- **41003's message is misleading here** — it advises checking the browser's
+  `location.hostname`, and there is no browser in a server-to-server call.
 
 **What L0178 is not:** it does not author item content (that is L0176), does not cover the
 Author API authoring experience (that is L0177), and — importantly — **never calls a
