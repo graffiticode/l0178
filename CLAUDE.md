@@ -20,7 +20,9 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - **Publish**: `npm run publish` (publishes `@graffiticode/l0178` and `@graffiticode/l0178-view` with public access)
 
 ### Testing
-Vitest is installed at the root but no test runner script is wired up yet, and no `*.spec.*` files exist in the packages.
+- **Run tests**: `npm test` (vitest, `packages/core` only — `src/compiler.test.ts` and `src/spec-directive.test.ts`)
+
+`spec-directive.test.ts` guards the PROMPTS. Every rule it asserts is load-bearing: it either encodes a documented Data API fact the recipe gets wrong without it, or it stops L0177's reasoning being imported into a dialect where it does not apply. Read its header before editing a prompt. Note what it does *not* do: it pins the prompt text, not the generated output — a passing run says the rules are still written down, not that the generator obeyed them. Match on normalized substrings, never exact lines (Prettier reformats `spec/*.md`).
 
 ### Deployment
 - **GCP Cloud Build**: `npm run gcp:build` (submits `cloudbuild.yaml` to the `graffiticode` project)
@@ -35,10 +37,12 @@ job* (which endpoint, which action, what the request carries); L0178 validates i
 holes as steering warnings, and — via `get_spec` — returns a host-language-neutral developer
 recipe covering signing, paging, the response envelope, and verification.
 
-**Status: under construction.** The vocabulary does not exist yet and no Data API fact has
-been verified against a live consumer. An L0178 program today is a base-language (L0000)
-program. `spec/instructions.md` is deliberately empty of facts — read its header before
-adding any.
+**Status: early.** One operation is modelled — `itembank/items` + `get` (`items-get`). The
+other 56 documented blocks are in `spec/coverage.md` and are unbuilt, not unsupported; an
+operation absent from the vocabulary must never be guessed at. **No fact in this repo has
+been verified against a live consumer** — everything is read off Learnosity's published
+reference and marked documented, not confirmed. `spec/instructions.md` states the evidence
+convention; read its header before adding a fact.
 
 **What L0178 is not:** it does not author item content (that is L0176), does not cover the
 Author API authoring experience (that is L0177), and — importantly — **never calls a
@@ -129,14 +133,25 @@ it would manufacture ceremony that teaches a reader nothing. See `spec/instructi
 ### Language Functions
 
 L0178 inherits the full L0000 base vocabulary (arithmetic, lists, lambdas,
-`map`/`filter`/`reduce`, pattern matching, tags) and **adds nothing yet**. L0003's demo
-keywords (`hello`, `image`, `theme`, `id`) were removed rather than left in place, so this
-dialect never claims to do something it does not.
+`map`/`filter`/`reduce`, pattern matching, tags) and adds a `data-job` head, one block
+function per `(endpoint, action)` pair, a `paging` policy, and that block's request fields.
 
-The planned shape is a `data-job` head carrying an endpoint, an action, and a request
-property chain, terminated with `{}` then `..`. The first slice to build is a read against
-the item bank with **paging as the centerpiece** — a truncated read is this API's analogue
-of L0177's fail-open: a valid response, a well-formed record set, silently incomplete.
+```
+data-job
+  paging EXHAUSTIVE
+  items-get [ references ["Grade7_ELA_1021"] status ["published"] limit 50 {} ]
+  {}..
+```
+
+**`paging` is the centrepiece, and the reason `complete` means anything here.** A paged
+read that does not declare how far it reads is a HOLE, because a truncated read is this
+API's analogue of L0177's fail-open: HTTP 200, `meta.status: true`, a well-formed `data`
+array, and `meta.records` counting the page rather than the total. Nothing downstream can
+catch it, so the design has to state its intent up front. `paging` is design intent only —
+it has no Learnosity path and is never emitted into a request.
+
+Warning order follows L0177 and is tested: holes first, then validity warnings for input
+that was rejected, then specificity advisories once the holes are filled.
 
 ### Data Flow
 

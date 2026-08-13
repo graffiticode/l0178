@@ -1,19 +1,20 @@
 {
   "id": "0178",
-  "status": "UNDER CONSTRUCTION — the vocabulary is not written yet and no Data API facts have been verified. Nothing here is ready to answer a caller. Do not route work to L0178 until this field says otherwise.",
-  "summary": "Produces developer COOKBOOK RECIPES for the Learnosity Data API — a precise, host-language-neutral procedure for reading from and writing to a Learnosity item bank server-to-server (endpoints, actions, request shape, paging, error handling, write safety). Documentation-only: it covers the published documentation plus the un-written tricks and tips, and never calls a Learnosity API itself. It emits a recipe to follow, NOT item content and NOT runnable code.",
+  "status": "EARLY — one operation is modelled (itembank/items + get, the Item bank read). The other 56 documented (endpoint, action) blocks are not built yet; see spec/coverage.md. No fact in this dialect has been verified against a live Learnosity consumer — everything is read off the published reference and is presented as documented, not confirmed.",
+  "summary": "Produces developer COOKBOOK RECIPES for the Learnosity Data API — a precise, host-language-neutral procedure for running a server-to-server job against a Learnosity Item bank: signing, the versioned POST-only transport, paging a result set to completion, reading the response envelope, and verifying the job did what was intended. Documentation-only: it covers the published documentation plus the un-written tricks and tips, and never calls a Learnosity API. It emits a recipe to follow, NOT item content and NOT runnable code.",
   "in_scope": [
-    "How to sign and send a Data API request server-to-server with the official Learnosity SDK, and how that signing differs from the front-end APIs",
-    "Which endpoint and action answer a given question, and the request fields legal for that (endpoint, action) pair",
-    "How to page a result set to completion — the failure this dialect exists to prevent is a truncated read that returns a valid response and a silently incomplete record set",
-    "How to read the response envelope: distinguishing transport failure from an API-level error the envelope reports",
-    "Write safety as recipe content: what a write persists, what re-running it does, and how to stage it against a scratch target",
-    "The verification steps that tell a developer their Data API integration is correct AND complete"
+    "How to read Items from an Item bank (itembank/items, action get) — filtering by reference, status, tags, question type, workflow, creator or time window, and shaping the response with include",
+    "How to page a result set to completion — the failure this dialect exists to prevent is a truncated read that returns HTTP 200, meta.status true, and a well-formed but silently incomplete record set, where meta.records counts the page rather than the total",
+    "How to sign and send a Data API request with the official Learnosity SDK, and how the versioned POST-only transport differs from the front-end APIs",
+    "How to read the response envelope — meta.status as an API-level verdict separate from the HTTP status, and meta.code / meta.message on failure",
+    "Rate limiting: per-endpoint quotas over a 5-second window, and how that interacts with exhausting a large result set",
+    "The verification steps that tell a developer their job is correct AND complete"
   ],
   "out_of_scope": [
-    "Authoring the assessment item CONTENT being written (stems, options, answer keys, passages) — that is L0176. This dialect describes the OPERATION that moves content into a bank; it does not compose the content",
+    "Authoring the assessment item CONTENT being read or written (stems, options, answer keys, passages) — that is L0176. This dialect describes the OPERATION that moves content in and out of a bank; it does not compose the content",
     "Embedding and configuring the Author API authoring experience (item/activity editor and browser) — that is L0177",
     "Delivering assessments to learners (Items API) and reading responses/scores/reports (Reports API) — each its own sibling dialect, none built yet. Say no dialect covers it rather than stretching this one",
+    "Data API operations not yet modelled — writes (set/update/delete), the async job family, and the sessions and reports endpoints. spec/coverage.md lists the whole surface; an operation absent from the vocabulary is unbuilt, not unsupported, and must not be guessed at",
     "Calling the Learnosity API. This dialect is documentation-only: the caller's own code signs and sends every request with the caller's own consumer key. L0178 holds no credentials and performs no requests",
     "Integrations for any platform other than Learnosity",
     "Emitting runnable host-language code — the recipe is a language-neutral procedure the caller implements in their own stack"

@@ -14,16 +14,37 @@ supplies is the published documentation plus the un-written tricks and tips.
 
 ### Status
 
-**Under construction.** L0178 has no vocabulary of its own yet, and no Data API
-fact in this package has been verified against a live consumer. An L0178 program
-today is a base-language (L0000) program.
+**Early.** One operation is modelled: `itembank/items` with action `get`, the Item
+bank read. The other 56 documented operations are listed in `coverage.md` and are
+unbuilt, not unsupported. No Data API fact in this package has been verified
+against a live consumer — everything is read off Learnosity's published reference.
+
+### Overview
+
+The code
+
+```
+data-job
+  paging EXHAUSTIVE
+  items-get [ status ["published"] organisation-id 123 limit 50 {} ]
+  {}..
+```
+
+describes a job that reads every published Item from bank 123, following the
+`meta.next` cursor until the result set is exhausted.
+
+`paging` is required on a paged operation. Without it the design is incomplete —
+a truncated read returns HTTP 200 with a well-formed but short result set, and
+`meta.records` counts the page rather than the total, so nothing downstream can
+catch it.
 
 ### Vocabulary
 
-None yet. The intended shape is a `data-job` head carrying an endpoint, an action,
-and a request property chain — with the legal request fields determined by the
-endpoint and action together, since the same endpoint takes disjoint fields under
-a read and a write.
+| Function | Arity | Example | Description |
+| :------- | :---: | :------ | :---------- |
+| **data-job** | 1 | `data-job … {}..` | The head; carries the policy and the block |
+| **items-get** | 2 | `items-get [ … ]` | `itembank/items` + action `get` |
+| **paging** | 2 | `paging EXHAUSTIVE` | `EXHAUSTIVE` or `SINGLE-PAGE`; design intent only |
 
-Everything currently available comes from L0000; see the base language
-specification for it.
+See `spec.md` for the full request-field table, and `coverage.md` for the whole
+Data API surface this is one operation of.

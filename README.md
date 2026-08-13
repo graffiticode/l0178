@@ -13,13 +13,44 @@ It is the second dialect in this class. The first is [L0177](https://github.com/
 
 ## Status
 
-> **Under construction.** L0178 has no vocabulary of its own yet, and **no Data API fact in this repo has been verified against a live consumer.** `packages/core/spec/instructions.md` is deliberately empty of facts — an empty section is a hole a reader can see, while a section of plausible unverified claims is a hole that looks like knowledge. An L0178 program today is a base-language (L0000) program.
+> **Early.** One operation is modelled — `itembank/items` + `get`, the Item bank read. The other 56 documented `(endpoint, action)` blocks are listed in [`packages/core/spec/coverage.md`](packages/core/spec/coverage.md) and are unbuilt, not unsupported.
+>
+> **No fact in this repo has been verified against a live Learnosity consumer.** Everything is read off the published reference and is marked documented rather than confirmed. `spec/instructions.md` states the convention and holds to it.
 
-The first slice to build is a read against the item bank, with **paging as the centerpiece**: a truncated read returns a valid response and a well-formed record set that is silently incomplete, which is this API's analogue of the Author API's fail-open behaviour.
+## The failure this exists to prevent
+
+A **truncated read**. Ask the Data API for a result set larger than one page and you get HTTP 200, `meta.status: true`, and a well-formed `data` array — and `meta.records` counts the page you got, not the total that matched. Nothing about a short answer looks wrong.
+
+That is why a paged job is **incomplete** until it declares how far it reads:
+
+```
+data-job
+  paging EXHAUSTIVE
+  items-get [
+    references ["Grade7_ELA_1021" "Grade7_ELA_1022"]
+    status ["published"]
+    include-items ["dt_created" "dt_updated"]
+    organisation-id 123
+    limit 50
+    {}
+  ]
+  {}..
+```
+
+Drop the `paging` line and the compiler reports a hole rather than a design.
 
 ## Vocabulary
 
-None yet. The planned shape is a `data-job` head carrying an endpoint, an action, and a request property chain — with the legal request fields determined by the endpoint and action *together*, since the same endpoint takes disjoint fields under a read and a write.
+| Construct | Arity | Shape |
+| :-------- | :---: | :---- |
+| `data-job` | 1 | Head; takes the whole property + block chain. |
+| `items-get` | 2 | A block — one `(endpoint, action)` pair. Takes a `[list]` of request fields. |
+| `paging` | 2 | `EXHAUSTIVE` or `SINGLE-PAGE`. Design intent; never sent in a request. |
+| Request fields | 2 | `name value`, chained; the chain ends with `{}`. |
+
+**One keyword per `(endpoint, action)` pair.** A field's legality depends on the pair rather than the endpoint alone — `itembank/items` under `get` takes `references`/`limit`/`next`, under `set` an `items` array of definitions, and the two share nothing. It also keeps clear of the base language, where bare `get` and `set` are already taken.
+
+Request fields are lowercase-kebab, flattened from the API's nesting. The flattening is ambiguous — `include-items` is `include.items` but `item-pool-id` is `item_pool_id` — so the compiled output carries a `paths` map, and the recipe copies from it rather than expanding the name.
 
 See [`packages/core/spec/`](packages/core/spec/) for the specification, scope boundaries, and authoring guide.
 

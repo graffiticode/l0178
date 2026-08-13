@@ -1,7 +1,30 @@
 {
   "id": "0178",
-  "status": "UNDER CONSTRUCTION — no vocabulary, no verified facts. Not ready to answer callers.",
-  "description": "Developer cookbook for the Learnosity Data API — the server-to-server interface to a Learnosity item bank. The client describes a data job (endpoint, action, request), and L0178 returns a host-language-neutral recipe: how to sign the request, how to page the result set to completion, how to read the response envelope, and how to verify the job did what was intended. Documentation-only: it never calls a Learnosity API, holds no credentials, and emits no runnable code. It does NOT author item content (that is L0176) and does NOT cover the Author API authoring experience (that is L0177). Use ONLY when the user names Learnosity.",
-  "supported_item_types": [],
-  "example_prompts": []
+  "status": "EARLY — one operation modelled (itembank/items + get). Nothing verified against a live consumer; every fact is documented, not confirmed.",
+  "description": "Produces developer cookbook recipes for the Learnosity Data API — the server-to-server interface to a Learnosity Item bank. The client describes a data job (which operation, what the request carries, how far it reads) and L0178 validates it, flags holes as steering warnings, and via get_spec returns a host-language-neutral recipe: goal, preconditions, procedure, a dedicated paging section, gotchas, and verification steps. The failure it exists to prevent is a truncated read — a short result set returns HTTP 200 with meta.status true and a well-formed data array, and meta.records counts the page rather than the total, so nothing about it looks wrong. Currently models reading Items from an Item bank; other operations are unbuilt, not unsupported. It does NOT author item content (that is L0176), does NOT cover the Author API authoring experience (that is L0177), and never calls a Learnosity API. Use ONLY when the user names Learnosity.",
+  "supported_item_types": [
+    "items-get"
+  ],
+  "example_prompts": [
+    {
+      "prompt": "Read every published Item tagged subject=English from Item bank 123.",
+      "produces": "items-get",
+      "notes": "A filtered read of the whole match set — becomes paging EXHAUSTIVE plus a tag filter, and the recipe's paging loop terminates on the absence of meta.next."
+    },
+    {
+      "prompt": "Fetch Items Grade7_ELA_1021 and Grade7_ELA_1022 with their creation and update dates.",
+      "produces": "items-get",
+      "notes": "Named references plus include-items; small enough that a single page suffices, but the policy must still be declared."
+    },
+    {
+      "prompt": "Get every Item containing an mcq question, created since January, newest first.",
+      "produces": "items-get",
+      "notes": "Exercises questions-types, a mintime window, and sort/sort-field — and needs exhaustive paging, since the match set is open-ended."
+    },
+    {
+      "prompt": "Pull one page of archived Items so I can see the shape of the data.",
+      "produces": "items-get",
+      "notes": "The single-page case: accepted, but the recipe must say the result is not the full match set and that nothing in the response reveals that."
+    }
+  ]
 }

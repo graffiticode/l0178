@@ -51,7 +51,7 @@ const ownInstructions = readFileSync(join(specDir, "instructions.md"), "utf-8");
 writeFileSync(join(outDir, "instructions.md"), `${parentInstructions}\n\n${ownInstructions}`);
 
 // 4. Copy L0178's own verbatim spec assets.
-for (const f of ["usage-guide.md", "scope.json", "schema.json", "template.gc"]) {
+for (const f of ["usage-guide.md", "scope.json", "schema.json", "template.gc", "spec-directive.md"]) {
   const src = join(specDir, f);
   if (existsSync(src)) copyFileSync(src, join(outDir, f));
 }
