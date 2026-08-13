@@ -17,8 +17,9 @@ not in the documentation; they come from building and running.
 | :-- | --: |
 | Endpoints | **40** |
 | `(endpoint, action)` blocks | **57** |
-| Documented parameters (incl. nested) | ~579 |
+| Documented parameters (incl. nested) | ~576 |
 | Blocks returning a paged result | 13 |
+| Blocks that create an async job | 13 |
 
 Actions are exactly four: `get` (28), `set` (20), `update` (8), `delete` (1).
 
@@ -27,23 +28,34 @@ Actions are exactly four: `get` (28), `set` (20), `update` (8), `delete` (1).
 **1. `duplicate` is a PATH, not an action.** `itembank/items/duplicate` takes action `set`. The
 action vocabulary is closed at four verbs, which keeps the registry's second axis small.
 
-**2. `(endpoint, action)` is very nearly the right registry key — with one exception to resolve.**
-Field sets are genuinely disjoint across actions on one endpoint, which is the whole reason the
-key needs two levels: `itembank/items` under `get` takes `references`/`limit`/`next`/`status`/
-`tags`/`include`; under `set` it takes an `items` array of definitions. But `sessions` + `set` is
-documented **twice**, by `Template-submission` (article `26076278679069`) and `Failed-submissions`
-(article `26076336091933`), with different field sets. Either they are variants keyed on a field
-such as `data_format`, or the key needs a third axis. **Resolve this before writing `vocab.ts`** —
-it is the one structural question the map could not close.
+**2. The action name does NOT tell you whether an operation writes.** `jobs/sessions/scores/subscores`
+takes action **`get`** and triggers a subscore *recalculation* job. Any read/write classification
+must come from the operation's own description, never from its verb. This is why the ledger has no
+R/W column: a derived one would have been wrong and would have looked authoritative.
 
-**3. There are two program shapes, and the second is real.** Most endpoints are synchronous
-request-response. The `jobs/*` family is asynchronous: create a long-running job by POSTing to
-`jobs/reports/datasets`, `jobs/sessions/metadata` or `jobs/sessions/statuses`, then poll `jobs`
-with `get` (which takes `references`, `status`, `limit`, `mintime`/`maxtime`) to check progress
-and retrieve results. A head designed around one synchronous request with paging does not model
-this. Decide whether it is a second head or a mode of the first.
+**3. `(endpoint, action)` is the right key, but a block may carry VARIANTS.** Field sets are
+genuinely disjoint across actions on one endpoint — `itembank/items` under `get` takes
+`references`/`limit`/`next`/`status`/`tags`/`include`, under `set` an `items` array of definitions.
+That is why the key needs two levels. The one apparent counter-example resolved cleanly: `sessions`
++ `set` is a **discriminated union on `data_format`**, not a third axis —
 
-**4. Paging is a read-side concern, uniformly.** All 13 paged blocks are `get`. No write paginates.
+| `data_format` | `data` | Also takes | Article |
+| :-- | :-- | :-- | :-- |
+| `failed_submission` | `array[string]` of base64 session blobs | `ignore_response_revisions` | `26076336091933` |
+| `from_template` | `array[object]` of sessions + responses | — | `26076278679069` |
+
+Same endpoint, same action, disjoint fields, selected by a field *value*. Model it as a variant
+inside the `(sessions, set)` block keyed on `data_format`. **The registry stays two-level.**
+
+**4. Async is a MODE, not a second head — and `jobs` is the shared polling channel.** 13 blocks
+create a long-running job and return `{ data: { job_reference } }`, to be polled with `jobs` +
+`get`. They are spread across `itembank/*`, `sessions/*`, `reports/*` and `jobs/*` — async is a
+property of the individual operation, not of a path prefix, so it cannot be modelled by giving
+`jobs/*` its own head. Two of the 13 are `get` blocks (`itembank/offlinepackage`,
+`jobs/sessions/scores/subscores`), both verified by reading their response sections.
+
+**5. Paging and async are disjoint concerns.** 13 blocks page, 13 create jobs, and no block does
+both. A read either returns a page (with `meta.next`) or a `job_reference`, never both.
 
 ## The scope boundary — OPEN, needs a decision
 
@@ -73,91 +85,98 @@ Endpoint articles are titled `<Endpoint> - Endpoints - Data API`; error codes ar
 so any row can be re-read at its source. Parameter counts include nested properties and are for
 SIZING ONLY — do not treat them as a field list.
 
+Two extraction traps, both hit and fixed, both worth knowing before re-deriving this table: several
+articles embed an `Example Response:` *inside* a parameter description, which truncates the
+parameter section early (it put `itembank/questions get` at 6 params instead of 16); and an action
+block's text runs on into the next operation's prose, so scanning a whole block for `job_reference`
+marks every operation in a mixed article as async. Bound the parameter section on the
+`Responses`/`Response example` header, and the async check on a short window after it.
+
 ## The ledger
 
 ### itembank  (25 blocks, 16 endpoints) — L0178 core
 
-| Endpoint | Action | R/W | Paged | Params | Source article |
+| Endpoint | Action | Paged | Async | Params | Source article |
 | :-- | :-- | :-: | :-: | --: | :-- |
-| `itembank/activities` | `get` | read | yes | 23 | `26076378893725` |
-| `itembank/activities` | `set` | WRITE | — | 22 | `26076378893725` |
-| `itembank/activities/duplicate` | `set` | WRITE | — | 14 | `26076378893725` |
-| `itembank/activities/tags` | `set` | WRITE | — | 12 | `26076378932765` |
-| `itembank/activities/tags` | `update` | WRITE | — | 12 | `26076378932765` |
-| `itembank/activities/templates` | `get` | read | — | 1 | `26076390673565` |
-| `itembank/features` | `get` | read | yes | 17 | `26076399481501` |
-| `itembank/features` | `set` | WRITE | — | 13 | `26076399481501` |
-| `itembank/features/duplicate` | `set` | WRITE | — | 10 | `26076399481501` |
-| `itembank/items` | `get` | read | yes | 24 | `26076386828189` |
-| `itembank/items` | `set` | WRITE | — | 32 | `26076386828189` |
-| `itembank/items/duplicate` | `set` | WRITE | — | 13 | `26076386828189` |
-| `itembank/items/tags` | `set` | WRITE | — | 12 | `26076399449757` |
-| `itembank/items/tags` | `update` | WRITE | — | 13 | `26076399449757` |
-| `itembank/offlinepackage` | `get` | read | — | 5 | `26076363707421` |
-| `itembank/playertemplates` | `get` | read | — | 1 | `26076390673565` |
-| `itembank/pools` | `get` | read | yes | 8 | `26076363663005` |
-| `itembank/pools` | `set` | WRITE | — | 17 | `26076363663005` |
-| `itembank/pools` | `update` | WRITE | — | 16 | `26076363663005` |
-| `itembank/questions` | `get` | read | yes | 16 | `26076378985629` |
-| `itembank/questions` | `set` | WRITE | — | 13 | `26076378985629` |
-| `itembank/questions/duplicate` | `set` | WRITE | — | 10 | `26076378985629` |
-| `itembank/upload/assets` | `get` | read | — | 8 | `26076399578397` |
-| `itembank/workflows` | `get` | read | yes | 5 | `26076399599005` |
-| `itembank/workflows` | `set` | WRITE | — | 12 | `26076399599005` |
+| `itembank/activities` | `get` | yes | — | 23 | `26076378893725` |
+| `itembank/activities` | `set` | — | — | 22 | `26076378893725` |
+| `itembank/activities/duplicate` | `set` | — | **job** | 14 | `26076378893725` |
+| `itembank/activities/tags` | `set` | — | — | 12 | `26076378932765` |
+| `itembank/activities/tags` | `update` | — | — | 12 | `26076378932765` |
+| `itembank/activities/templates` | `get` | — | — | 1 | `26076390673565` |
+| `itembank/features` | `get` | yes | — | 17 | `26076399481501` |
+| `itembank/features` | `set` | — | — | 13 | `26076399481501` |
+| `itembank/features/duplicate` | `set` | — | — | 10 | `26076399481501` |
+| `itembank/items` | `get` | yes | — | 24 | `26076386828189` |
+| `itembank/items` | `set` | — | — | 32 | `26076386828189` |
+| `itembank/items/duplicate` | `set` | — | — | 13 | `26076386828189` |
+| `itembank/items/tags` | `set` | — | — | 12 | `26076399449757` |
+| `itembank/items/tags` | `update` | — | — | 13 | `26076399449757` |
+| `itembank/offlinepackage` | `get` | — | **job** | 5 | `26076363707421` |
+| `itembank/playertemplates` | `get` | — | — | 1 | `26076390673565` |
+| `itembank/pools` | `get` | yes | — | 8 | `26076363663005` |
+| `itembank/pools` | `set` | — | **job** | 17 | `26076363663005` |
+| `itembank/pools` | `update` | — | **job** | 16 | `26076363663005` |
+| `itembank/questions` | `get` | yes | — | 16 | `26076378985629` |
+| `itembank/questions` | `set` | — | — | 13 | `26076378985629` |
+| `itembank/questions/duplicate` | `set` | — | — | 10 | `26076378985629` |
+| `itembank/upload/assets` | `get` | — | — | 5 | `26076399578397` |
+| `itembank/workflows` | `get` | yes | — | 5 | `26076399599005` |
+| `itembank/workflows` | `set` | — | — | 12 | `26076399599005` |
 
 ### itembank-tags  (6 blocks, 4 endpoints) — L0178 core
 
-| Endpoint | Action | R/W | Paged | Params | Source article |
+| Endpoint | Action | Paged | Async | Params | Source article |
 | :-- | :-- | :-: | :-: | --: | :-- |
-| `itembank/tagging/hierarchies` | `get` | read | — | 2 | `26076373806749` |
-| `itembank/tagging/hierarchies/nodes` | `get` | read | — | 3 | `26076373806749` |
-| `itembank/tagging/tags` | `get` | read | yes | 9 | `26076379042589` |
-| `itembank/tagging/tags` | `set` | WRITE | — | 14 | `26076379042589` |
-| `itembank/tags` | `get` | read | — | 4 | `26076379042589` |
-| `itembank/tags` | `set` | WRITE | — | 3 | `26076379042589` |
+| `itembank/tagging/hierarchies` | `get` | — | — | 2 | `26076373806749` |
+| `itembank/tagging/hierarchies/nodes` | `get` | — | — | 3 | `26076373806749` |
+| `itembank/tagging/tags` | `get` | yes | — | 9 | `26076379042589` |
+| `itembank/tagging/tags` | `set` | — | — | 14 | `26076379042589` |
+| `itembank/tags` | `get` | — | — | 4 | `26076379042589` |
+| `itembank/tags` | `set` | — | — | 3 | `26076379042589` |
 
-### jobs  (5 blocks, 5 endpoints) — L0178 (async shape)
+### jobs  (5 blocks, 5 endpoints) — L0178 — async polling channel
 
-| Endpoint | Action | R/W | Paged | Params | Source article |
+| Endpoint | Action | Paged | Async | Params | Source article |
 | :-- | :-- | :-: | :-: | --: | :-- |
-| `jobs` | `get` | read | — | 10 | `26076318439197` |
-| `jobs/reports/datasets` | `set` | WRITE | — | 2 | `26076335897757` |
-| `jobs/sessions/metadata` | `set` | WRITE | — | 5 | `26076304349213` |
-| `jobs/sessions/scores/subscores` | `get` | read | — | 1 | `26076310392861` |
-| `jobs/sessions/statuses` | `update` | WRITE | — | 4 | `26076335907869` |
+| `jobs` | `get` | — | — | 10 | `26076318439197` |
+| `jobs/reports/datasets` | `set` | — | **job** | 2 | `26076335897757` |
+| `jobs/sessions/metadata` | `set` | — | **job** | 5 | `26076304349213` |
+| `jobs/sessions/scores/subscores` | `get` | — | **job** | 1 | `26076310392861` |
+| `jobs/sessions/statuses` | `update` | — | **job** | 4 | `26076335907869` |
 
 ### sessions  (16 blocks, 11 endpoints) — BOUNDARY — results surface
 
-| Endpoint | Action | R/W | Paged | Params | Source article |
+| Endpoint | Action | Paged | Async | Params | Source article |
 | :-- | :-- | :-: | :-: | --: | :-- |
-| `sessions` | `delete` | WRITE | — | 1 | `26076304588445` |
-| `sessions` | `set` | WRITE | — | 28 | `26076278679069` |
-| `sessions` | `set` | WRITE | — | 4 | `26076336091933` |
-| `sessions/item` | `update` | WRITE | — | 6 | `26076318688925` |
-| `sessions/metadata` | `get` | read | yes | 15 | `26076336114461` |
-| `sessions/reports/adaptive` | `get` | read | yes | 15 | `26076304443165` |
-| `sessions/responses` | `get` | read | yes | 17 | `26076304385565` |
-| `sessions/responses/feedback` | `get` | read | — | 1 | `27824043349661` |
-| `sessions/responses/feedback` | `update` | WRITE | — | 10 | `27824043349661` |
-| `sessions/responses/scores` | `get` | read | yes | 15 | `26076278639389` |
-| `sessions/responses/scores` | `update` | WRITE | — | 12 | `26076278639389` |
-| `sessions/responses/scores/grading` | `get` | read | — | 1 | `37621876726813` |
-| `sessions/responses/scores/grading` | `update` | WRITE | — | 10 | `37621876726813` |
-| `sessions/scores` | `get` | read | yes | 17 | `26076278627869` |
-| `sessions/statuses` | `get` | read | yes | 17 | `26076351111453` |
-| `sessions/templates` | `get` | read | — | 7 | `26076278657821` |
+| `sessions` | `delete` | — | **job** | 1 | `26076304588445` |
+| `sessions` | `set` | — | **job** | 28 | `26076278679069` |
+| `sessions` | `set` | — | **job** | 4 | `26076336091933` |
+| `sessions/item` | `update` | — | **job** | 6 | `26076318688925` |
+| `sessions/metadata` | `get` | yes | — | 15 | `26076336114461` |
+| `sessions/reports/adaptive` | `get` | yes | — | 15 | `26076304443165` |
+| `sessions/responses` | `get` | yes | — | 17 | `26076304385565` |
+| `sessions/responses/feedback` | `get` | — | — | 1 | `27824043349661` |
+| `sessions/responses/feedback` | `update` | — | — | 10 | `27824043349661` |
+| `sessions/responses/scores` | `get` | yes | — | 15 | `26076278639389` |
+| `sessions/responses/scores` | `update` | — | **job** | 12 | `26076278639389` |
+| `sessions/responses/scores/grading` | `get` | — | — | 1 | `37621876726813` |
+| `sessions/responses/scores/grading` | `update` | — | — | 10 | `37621876726813` |
+| `sessions/scores` | `get` | yes | — | 17 | `26076278627869` |
+| `sessions/statuses` | `get` | yes | — | 17 | `26076351111453` |
+| `sessions/templates` | `get` | — | — | 7 | `26076278657821` |
 
 ### reports  (3 blocks, 2 endpoints) — BOUNDARY — results surface
 
-| Endpoint | Action | R/W | Paged | Params | Source article |
+| Endpoint | Action | Paged | Async | Params | Source article |
 | :-- | :-- | :-: | :-: | --: | :-- |
-| `reports/datasets` | `get` | read | — | 4 | `26076304360861` |
-| `reports/datasets` | `set` | WRITE | — | 2 | `26076304360861` |
-| `scoring` | `get` | read | — | 5 | `26076278598813` |
+| `reports/datasets` | `get` | — | — | 4 | `26076304360861` |
+| `reports/datasets` | `set` | — | — | 2 | `26076304360861` |
+| `scoring` | `get` | — | — | 5 | `26076278598813` |
 
 ### misc  (2 blocks, 2 endpoints) — L0178 (fringe)
 
-| Endpoint | Action | R/W | Paged | Params | Source article |
+| Endpoint | Action | Paged | Async | Params | Source article |
 | :-- | :-- | :-: | :-: | --: | :-- |
-| `assets` | `get` | read | — | 2 | `26076278454301` |
-| `consumer/keys/lti` | `set` | WRITE | — | 4 | `26076278463389` |
+| `assets` | `get` | — | — | 2 | `26076278454301` |
+| `consumer/keys/lti` | `set` | — | — | 4 | `26076278463389` |

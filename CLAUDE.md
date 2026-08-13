@@ -81,9 +81,24 @@ it would manufacture ceremony that teaches a reader nothing. See `spec/instructi
   - `spec/coverage.md`: **the coverage ledger** — the whole Data API surface (40 endpoints,
     57 `(endpoint, action)` blocks) read off Learnosity's published reference. This is the
     denominator: a completeness claim is only sayable against a known total. It is a map of
-    the API's SHAPE, not of its behaviour, and nothing in it is verified. It also carries the
-    three structural questions the map left open — read them before writing `vocab.ts`. Not a
-    served asset; `build-static.js` does not copy it.
+    the API's SHAPE, not of its behaviour, and nothing in it is verified. Read its "What the map
+    settled" section before writing `vocab.ts` — it fixes the registry design. One question is
+    still open: where the boundary falls against the future Reports dialect. Not a served asset;
+    `build-static.js` does not copy it.
+
+### The registry design, as the map settled it
+
+- The key is **`(endpoint, action)`**, two levels. Actions are closed at four verbs.
+- `duplicate` is a path (`itembank/items/duplicate`), not an action.
+- A block may carry **variants** selected by a field VALUE, not by a third key axis. The only
+  case is `sessions` + `set`, discriminated on `data_format` (`failed_submission` vs
+  `from_template`).
+- **Async is a mode, not a second head.** 13 blocks return `{ data: { job_reference } }` instead
+  of a result, to be polled with `jobs` + `get`. They span `itembank/*`, `sessions/*`, `reports/*`
+  and `jobs/*`, so async belongs to the operation, not to a path prefix.
+- **Never infer read/write from the action verb.** `jobs/sessions/scores/subscores` takes `get`
+  and triggers a recalculation job.
+- Paging and async are disjoint: 13 blocks page, 13 create jobs, none does both.
   - `tools/build-static.js`: emits `dist/static/` — merged `lexicon.json`, `spec.html` (via
     `spec-md`), `instructions.md` (parent L0000's concatenated with L0178's), verbatim
     copies of `usage-guide.md`/`scope.json`/`schema.json`/`template.gc`, and a
