@@ -78,6 +78,12 @@ it would manufacture ceremony that teaches a reader nothing. See `spec/instructi
   - `src/compiler.ts`: `Checker` and `Transformer` extending L0000's. Only `PROG` so far.
   - `spec/`: **the product.** For an oracle dialect the prompts matter more than the
     compiler — treat these files as load-bearing.
+  - `spec/coverage.md`: **the coverage ledger** — the whole Data API surface (40 endpoints,
+    57 `(endpoint, action)` blocks) read off Learnosity's published reference. This is the
+    denominator: a completeness claim is only sayable against a known total. It is a map of
+    the API's SHAPE, not of its behaviour, and nothing in it is verified. It also carries the
+    three structural questions the map left open — read them before writing `vocab.ts`. Not a
+    served asset; `build-static.js` does not copy it.
   - `tools/build-static.js`: emits `dist/static/` — merged `lexicon.json`, `spec.html` (via
     `spec-md`), `instructions.md` (parent L0000's concatenated with L0178's), verbatim
     copies of `usage-guide.md`/`scope.json`/`schema.json`/`template.gc`, and a
