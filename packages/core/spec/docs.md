@@ -4,35 +4,26 @@
 **Introduction**
 
 *Graffiticode* is a collection of domain languages used for creating task
-specific web apps. **L0178** is a *Graffiticode* language for writing
-'hello, world' web apps.
+specific web apps. **L0178** is a *Graffiticode* language that produces developer
+cookbook recipes for the **Learnosity Data API** — the server-to-server interface
+to a Learnosity item bank.
 
-L0178 can be used as a template for creating other, presumably more
-interesting and useful, languages.
+L0178 is documentation-only. It never calls the Data API: the caller's own code
+signs and sends every request with the caller's own consumer key. What L0178
+supplies is the published documentation plus the un-written tricks and tips.
 
-### Overview
+### Status
 
-The code
-
-```
-hello "world"..
-```
-
-renders
-
-| **hello, world!**
-
-in the browser view.
+**Under construction.** L0178 has no vocabulary of its own yet, and no Data API
+fact in this package has been verified against a live consumer. An L0178 program
+today is a base-language (L0000) program.
 
 ### Vocabulary
 
+None yet. The intended shape is a `data-job` head carrying an endpoint, an action,
+and a request property chain — with the legal request fields determined by the
+endpoint and action together, since the same endpoint takes disjoint fields under
+a read and a write.
 
-| Function  | Arity | Example  | Description |
-| --------- | :---: | -------- | ----------- |
-| **hello** | 1     | `hello "world"` | renders **hello, world!** in the form |
-| **val**   | 2     | `val ob "x"` | returns the value of `x` in `ob` |
-| **concat**| 1     | `concat [x,y]` | returns the string value that is the concatentation of the values of x and y |
-| **add**   | 2     | `add x y` | returns the sum of values of `x` and `y` |
-| **map**   | 2     | `map fn [1,2,3]` | returns a list containing the result of applying `fn` to each element in the list `[1,2,3]` |
-| **data**  | 1     | `data ob` | returns the value of data passed to the current task, or otherwise the value of `ob` |
-
+Everything currently available comes from L0000; see the base language
+specification for it.

@@ -1,18 +1,21 @@
 {
   "id": "0178",
-  "summary": "Base Graffiticode dialect — a small functional language for evaluating expressions or rendering simple UI primitives.",
+  "status": "UNDER CONSTRUCTION — the vocabulary is not written yet and no Data API facts have been verified. Nothing here is ready to answer a caller. Do not route work to L0178 until this field says otherwise.",
+  "summary": "Produces developer COOKBOOK RECIPES for the Learnosity Data API — a precise, host-language-neutral procedure for reading from and writing to a Learnosity item bank server-to-server (endpoints, actions, request shape, paging, error handling, write safety). Documentation-only: it covers the published documentation plus the un-written tricks and tips, and never calls a Learnosity API itself. It emits a recipe to follow, NOT item content and NOT runnable code.",
   "in_scope": [
-    "Arithmetic, string manipulation, list construction and traversal, ranges",
-    "Lambdas, let-bound helpers, pattern matching on numbers/lists/pairs/records/tags",
-    "map / filter / reduce over lists",
-    "Comparison operators (eq / ne / gt / lt / ge / le)",
-    "UI primitives: hello (greetings), image (URL), theme (DARK / LIGHT), id (element identifier)"
+    "How to sign and send a Data API request server-to-server with the official Learnosity SDK, and how that signing differs from the front-end APIs",
+    "Which endpoint and action answer a given question, and the request fields legal for that (endpoint, action) pair",
+    "How to page a result set to completion — the failure this dialect exists to prevent is a truncated read that returns a valid response and a silently incomplete record set",
+    "How to read the response envelope: distinguishing transport failure from an API-level error the envelope reports",
+    "Write safety as recipe content: what a write persists, what re-running it does, and how to stage it against a scratch target",
+    "The verification steps that tell a developer their Data API integration is correct AND complete"
   ],
   "out_of_scope": [
-    "Anything that produces a domain-specific artifact (assessments, spreadsheets, charts, maps, diagrams, boards, data pipelines, games, puzzles) — those belong in higher-numbered dialects, not in L0178",
-    "External data (HTTP, file, database) — L0178 evaluates a closed program",
-    "Stateful or streaming operations",
-    "Custom rendering beyond hello / image / theme / id",
-    "Cross-language composition via import — each item runs in exactly one dialect"
+    "Authoring the assessment item CONTENT being written (stems, options, answer keys, passages) — that is L0176. This dialect describes the OPERATION that moves content into a bank; it does not compose the content",
+    "Embedding and configuring the Author API authoring experience (item/activity editor and browser) — that is L0177",
+    "Delivering assessments to learners (Items API) and reading responses/scores/reports (Reports API) — each its own sibling dialect, none built yet. Say no dialect covers it rather than stretching this one",
+    "Calling the Learnosity API. This dialect is documentation-only: the caller's own code signs and sends every request with the caller's own consumer key. L0178 holds no credentials and performs no requests",
+    "Integrations for any platform other than Learnosity",
+    "Emitting runnable host-language code — the recipe is a language-neutral procedure the caller implements in their own stack"
   ]
 }

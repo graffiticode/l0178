@@ -11,35 +11,9 @@ semantics and base library can be found here:
 
 ## Functions
 
-| Function | Signature | Description |
-| :------- | :-------- | :---------- |
-| `hello` | `<string: record>` | Renders a hello message |
-| `theme` | `<[dark|light] record: record>` | Selects a theme |
+L0178 defines no functions yet. Its vocabulary will be the Data API job registry —
+an endpoint, an action, and a request property chain, with the legal request fields
+determined by the endpoint and action together rather than by the endpoint alone.
 
-### hello
-
-Renders a hello message formatted in K&R style that includes the given string.
-
-```
-hello "world"  | returns "hello, world!"
-```
-
-### theme
-
-Select a theme and render the theme toggle button to allow users to set the
-theme. The tag values `dark` and `light` are the only accepted argument values.
-
-```
-theme dark "as night"
-```
-```
-theme light "as day"
-```
-
-## Program Examples
-
-Render the text "hello, world!" in the dark theme.
-
-```
-theme dark hello "night"..
-```
+Until that exists, an L0178 program is a base-language program: everything available
+here comes from L0000.

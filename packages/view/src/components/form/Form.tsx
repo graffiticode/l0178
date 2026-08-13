@@ -1,7 +1,13 @@
 // SPDX-License-Identifier: MIT
-// L0178's Form: renders the language's UI primitives (hello / image / theme / print) and
-// a theme toggle, or compile errors. Injected into the shared View (from
-// @graffiticode/l0000-view), which supplies `state.data`, `state.errors`, and `state.apply`.
+// L0178's Form: renders the compiled Data API job, or compile errors. Injected into the
+// shared View (from @graffiticode/l0000-view), which supplies `state.data`,
+// `state.errors`, and `state.apply`.
+//
+// Renders raw JSON for now — there is no job to render yet, and L0003's primitive
+// renderers (hello / image / print) were removed with the keywords that produced them.
+// When the vocabulary exists this should follow L0177's Form, which renders the DESIGN:
+// the target of the job, whether it is complete, the warnings in compiler order, and
+// every request field beside the exact API path it resolves to.
 import "../../index.css";
 import { useState, useEffect } from "react";
 import type { FormProps, CompileError } from "@graffiticode/l0000-view";
@@ -33,7 +39,8 @@ function renderErrors(errors: CompileError[], theme: string | undefined) {
 
 function renderJSON(data: any) {
   if (typeof data === "object" && data !== null && !Array.isArray(data)) {
-    const { schema, theme, ...rest } = data;
+    // Discarded on purpose: `schema` and `theme` are envelope, not job content.
+    const { schema: _schema, theme: _theme, ...rest } = data;
     return <pre className="text-xs">{JSON.stringify(rest, null, 2)}</pre>;
   }
   return <pre className="text-xs">{JSON.stringify(data, null, 2)}</pre>;
@@ -42,16 +49,6 @@ function renderJSON(data: any) {
 function renderData(data: any) {
   // A themed scalar/list body is wrapped under `value`; named records are merged inline.
   const source = data?.value ?? data;
-  if (source?.print !== undefined) {
-    if (typeof source.print === "string") {
-      return <span className="text-sm">{source.print}</span>;
-    }
-    return renderJSON(source.print);
-  } else if (typeof source?.hello === "string") {
-    return <span className="text-sm">{`hello, ${source.hello}!`}</span>;
-  } else if (typeof source?.image === "string") {
-    return <img src={source.image} />;
-  }
   return renderJSON(source);
 }
 

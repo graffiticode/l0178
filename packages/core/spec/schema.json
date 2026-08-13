@@ -2,21 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "L0178",
   "title": "L0178",
-  "description": "Output of an L0178 program — a rendered UI record (hello/image/theme) or an evaluated base-language value.",
+  "description": "Output of an L0178 program — the normalized Data API job plus steering warnings. This is NOT the deliverable; the developer-facing cookbook recipe is produced by get_spec. No properties are defined yet: the vocabulary is unwritten, so a program compiles to a base-language value. Atomic dialect (not a composition upstream).",
   "type": "object",
-  "properties": {
-    "hello": {
-      "description": "The person, place or thing being greeted",
-      "type": "string"
-    },
-    "theme": {
-      "description": "Light or dark theme",
-      "type": "string",
-      "enum": ["light", "dark"]
-    },
-    "image": {
-      "description": "URL of an image to display",
-      "type": "string"
-    }
-  }
+  "properties": {}
 }
