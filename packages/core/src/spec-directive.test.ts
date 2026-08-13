@@ -25,6 +25,7 @@ const specDir = join(dirname(fileURLToPath(import.meta.url)), "..", "spec");
 const norm = (s: string) => s.replace(/[`*]/g, "").replace(/\s+/g, " ");
 const directive = norm(readFileSync(join(specDir, "spec-directive.md"), "utf-8"));
 const instructions = norm(readFileSync(join(specDir, "instructions.md"), "utf-8"));
+const register = norm(readFileSync(join(specDir, "conflict-resolution.md"), "utf-8"));
 const has = (hay: string, needle: string) => hay.toLowerCase().includes(norm(needle).toLowerCase());
 
 describe("the directive keeps paging as its own section", () => {
@@ -121,6 +122,11 @@ describe("the envelope and its traps", () => {
 
   test("the unreproduced HTTP-vs-HTTPS claim is marked unresolved, not asserted", () => {
     expect(has(instructions, "did not reproduce and is UNRESOLVED")).toBe(true);
+    // An open conflict must stay traceable to the register, which records what would
+    // close it. A claim quietly resolved in favour of whichever source was read last is
+    // the failure this dialect cannot afford.
+    expect(has(instructions, "conflict-resolution.md")).toBe(true);
+    expect(has(register, "C5 — HTTP-not-HTTPS response code · **OPEN**")).toBe(true);
   });
 
   test("rate limits are per endpoint over a 5-second window", () => {
@@ -190,6 +196,26 @@ describe("honesty about evidence", () => {
 
   test("a step that cannot fail is not a check", () => {
     expect(has(directive, "A step that cannot fail is not a check")).toBe(true);
+  });
+});
+
+describe("the conflict register", () => {
+  test("it refuses to resolve a conflict by picking the tidier answer", () => {
+    expect(has(register, "An unresolved conflict stays unresolved in writing")).toBe(true);
+    expect(has(register, "a resolution records what settled it")).toBe(true);
+  });
+
+  test("the two cross-dialect conflicts with L0177 are recorded, not smoothed over", () => {
+    // domain means different things in each API, and L0177's differential discipline
+    // does not transfer. Resolving either "consistently" would have been the bug.
+    expect(has(register, "domain means different things per API")).toBe(true);
+    expect(has(register, "Whether verification must be differential")).toBe(true);
+    expect(has(register, "the wrong resolution would have looked like consistency")).toBe(true);
+  });
+
+  test("measured facts are scoped to what was actually exercised", () => {
+    expect(has(register, "public demo Item bank")).toBe(true);
+    expect(has(register, "It does not say the reader's consumer")).toBe(true);
   });
 });
 

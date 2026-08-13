@@ -136,7 +136,8 @@ Observed shape **[verified]** — note `versions`, which the reference does not 
   `http://data.learnosity.com/...` returned **400** with `meta.code` 41000 "Missing
   security parameters", not the documented 403 — most likely because the redirect to HTTPS
   dropped the POST body rather than because the API applied a scheme policy. Do not present
-  either code as the reliable signature of an HTTP-scheme mistake.
+  either code as the reliable signature of an HTTP-scheme mistake. Tracked as **C5** in
+  `conflict-resolution.md`, which records what would close it.
 
 ## 4. Rate limiting [documented]
 

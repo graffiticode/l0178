@@ -107,6 +107,12 @@ it would manufacture ceremony that teaches a reader nothing. See `spec/instructi
     settled" section before writing `vocab.ts` — it fixes the registry design. One question is
     still open: where the boundary falls against the future Reports dialect. Not a served asset;
     `build-static.js` does not copy it.
+  - `spec/conflict-resolution.md`: **the conflict register** — every place the sources
+    contradicted each other or the live API, what settled it, and what is still OPEN (currently
+    C5, the HTTP-vs-HTTPS response code). Add to it whenever a source disagreement is found, and
+    **never resolve one silently in favour of whichever source was read last**. Two entries are
+    conflicts between L0177 and this dialect, where the wrong resolution would have looked like
+    consistency. Also not a served asset.
 
 ### The registry design, as the map settled it
 
