@@ -66,18 +66,60 @@ property of the individual operation, not of a path prefix, so it cannot be mode
 **5. Paging and async are disjoint concerns.** 13 blocks page, 13 create jobs, and no block does
 both. A read either returns a page (with `meta.next`) or a `job_reference`, never both.
 
-## The scope boundary — OPEN, needs a decision
+## The scope boundary — SETTLED: the data/UX axis
 
-The `sessions/*` and `reports/*` groups (19 blocks) are Data API endpoints that read assessment
-RESULTS — responses, scores, statuses, adaptive reports, datasets. They sit squarely between this
-dialect and the future Reports API dialect. Three options, none yet chosen:
+**L0178 covers all 57 blocks.** The dividing line across this family of dialects is not which
+vendor API a call belongs to. It is:
 
-- L0178 covers all of Data API, and the Reports dialect covers only the Reports *API*
-- L0178 covers `itembank/*` + `jobs/*`, and the results endpoints go with the Reports dialect
-- L0178 covers everything except results *writes*
+> **"I want the data" vs "I want a UX of the data."** They are two views of the same underlying
+> thing, and each view is a dialect.
 
-The `itembank/*` group (31 blocks including tags) is unambiguously L0178. Start there regardless
-of how the boundary lands, which is what makes `itembank/items` a safe first branch.
+**L0178 is the DATA plane for the whole family.** Every other Learnosity dialect is a UX plane
+over some slice of the same data:
+
+| Underlying data | Data view | UX view |
+| :--- | :--- | :--- |
+| Item bank | **L0178** `itembank/*` | **L0177** (Author API) |
+| Assessment results | **L0178** `sessions/*`, `reports/*` | a Reports dialect, unbuilt |
+| Delivery | **L0178** `sessions/*` | an Items/Assess dialect, unbuilt |
+| Grading | **L0178** `sessions/responses/scores/grading` | a Grading dialect, unbuilt |
+
+The axis and the per-API split happen to coincide across this surface — nothing in the Data API's
+57 blocks renders anything, and nothing in the Reports API's 89 articles returns raw records — but
+the AXIS is the rule. Where the two ever disagree, follow the axis.
+
+**Why this and not a per-goal split.** Moving the 19 `sessions/*` + `reports/*` blocks to a
+Reports dialect looked attractive (a user asking for learner scores does not care which API
+answers). It fails on three counts the ledger makes measurable:
+
+- It splits the paged surface nearly in half — 7 of 13 paged blocks are `itembank/*`, **6 are
+  `sessions/*`** — so the `meta.next`/`meta.records` discipline, the one thing here verified
+  against a live consumer, would have to be taught in two prompts that then age independently.
+- It splits the async mode: 4 `itembank`, 4 `jobs`, **5 `sessions`**.
+- **It breaks the polling story outright.** A `sessions` write returns a `job_reference` whose
+  only completion path is `jobs` + `get`. Split them and the Reports dialect cannot describe how
+  to finish its own writes. The boundary is not even clean at the path level —
+  `jobs/sessions/metadata`, `jobs/sessions/statuses`, `jobs/reports/datasets` straddle it.
+
+And it does not recur. Session data is wanted by delivery, reporting AND grading; a goal-based cut
+re-opens the same argument with every new dialect, while the axis answers it once.
+
+**Two seams, stated rather than papered over.**
+
+- L0178 is the data **access** plane, not a retrieval plane: it writes as well as reads. So the
+  item bank has a UX write path (L0177's editor) and a data write path (L0178's `set`). That is
+  not a contradiction; it is what "two views of the same data" means.
+- **L0176 sits off the axis.** It composes item CONTENT — it is neither a data view nor a UX view
+  of existing data, it makes the payload that `itembank/items` + `set` transports. The chain is
+  L0176 composes → L0178 moves → L0177 renders for humans. Worth stating, because "authors
+  Learnosity items" and "writes items to the bank" sound like one job and are not.
+
+**Naming hazard.** Data API `reports/datasets` is NOT the Reports API. Two different things
+sharing a word; L0178 owns the former and will never own the latter.
+
+**Consequence for priorities.** Because this is the single data plane, partial coverage leaves
+every future UX dialect with holes it cannot fill — a Reports dialect would punt score extraction
+here and find it unbuilt. Completeness over the 57 matters more than it would for a leaf dialect.
 
 ## Provenance
 

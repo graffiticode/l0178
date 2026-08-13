@@ -104,9 +104,35 @@ it would manufacture ceremony that teaches a reader nothing. See `spec/instructi
     57 `(endpoint, action)` blocks) read off Learnosity's published reference. This is the
     denominator: a completeness claim is only sayable against a known total. It is a map of
     the API's SHAPE, not of its behaviour, and nothing in it is verified. Read its "What the map
-    settled" section before writing `vocab.ts` — it fixes the registry design. One question is
-    still open: where the boundary falls against the future Reports dialect. Not a served asset;
-    `build-static.js` does not copy it.
+    settled" section before writing `vocab.ts` — it fixes the registry design — and its "scope
+    boundary" section, which states the rule below. Not a served asset; `build-static.js` does
+    not copy it.
+
+### The boundary rule: the data/UX axis
+
+The line between the Learnosity dialects is **"I want the data" vs "I want a UX of the data"** —
+two views of the same underlying thing, one dialect each. Route on that axis, never on which
+vendor API a call belongs to.
+
+**L0178 is the DATA plane for the whole family** and covers ALL 57 Data API blocks. Every other
+Learnosity dialect is a UX plane over a slice of the same data: L0177 is the UX of the Item bank;
+a Reports dialect (unbuilt) is the UX of assessment results; delivery and grading likewise.
+
+Two seams to keep straight:
+
+- It is the data **access** plane, not a retrieval plane — it writes too. The Item bank therefore
+  has a UX write path (L0177's editor) and a data write path (L0178's `set`). That is what "two
+  views of the same data" means, not a contradiction.
+- **L0176 sits off the axis.** It composes item CONTENT — the payload this dialect transports.
+  L0176 composes → L0178 moves → L0177 renders. "Authors Learnosity items" and "writes items to
+  the bank" sound like one job and are not.
+
+Consequence: because this is the single data plane, partial coverage leaves every future UX
+dialect with holes it cannot fill. Completeness over the 57 matters more here than it would for a
+leaf dialect.
+
+**Naming hazard:** the Data API's `reports/datasets` endpoints are in scope here and are NOT the
+Reports API.
   - `spec/conflict-resolution.md`: **the conflict register** — every place the sources
     contradicted each other or the live API, what settled it, and what is still OPEN (currently
     C5, the HTTP-vs-HTTPS response code). Add to it whenever a source disagreement is found, and
