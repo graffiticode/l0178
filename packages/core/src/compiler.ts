@@ -106,7 +106,7 @@ function validateProp(
       // looks short, and a loop that stops when data.length < limit quits after one page
       // while meta.next was present the whole time. That is why this is worth a warning
       // at all: the request succeeds, and the damage is silent.
-      pushWarn(options, `${name}: ${value} exceeds the maximum of ${c.max}. Learnosity silently clamps it — the request succeeds and returns ${c.max} records with no error, so every page looks short and a loop that stops on a short page will drop the rest. Set ${name} to ${c.max} or less and terminate on the absence of meta.next.`);
+      pushWarn(options, `${name}: ${value} exceeds the maximum of ${c.max}. Learnosity silently clamps it — the request succeeds and returns ${c.max} records with no error, so every page looks short and a loop that stops on a short page will drop the rest. Set ${name} to ${c.max} or less, and terminate the loop on this endpoint's own end-of-data signal rather than on page size.`);
     }
   } else if (type === "string") {
     if (typeof value !== "string") pushWarn(options, `${name} must be a string.`);
@@ -174,20 +174,23 @@ function finalize(rec: any, options: any): any {
   // dialect exists to prevent: the API returns 200 with a well-formed record set that
   // is silently short, and meta.records counts the page rather than the total.
   if (block?.paged && top.paging === undefined) {
-    holes.push("This read is paged and the design doesn't say how far it reads. Set `paging EXHAUSTIVE` to follow meta.next to the end, or `paging SINGLE-PAGE` to deliberately take one page. Leaving it unsaid is how a truncated read ships: the response is a valid 200 either way, and meta.records counts the page you got, not the total that matched.");
+    holes.push("This read is paged and the design doesn't say how far it reads. Set `paging EXHAUSTIVE` to read the whole result set, or `paging SINGLE-PAGE` to deliberately take one page. Leaving it unsaid is how a truncated read ships: the response is a valid 200 either way, and meta.records counts the page you got, not the total that matched.");
   }
 
   if (block) {
     if (top.paging === "single-page") {
       specificity.push("`paging SINGLE-PAGE` returns at most one page. The result is not the full match set, and nothing in the response says so — meta.records counts what came back.");
     }
-    const filters = ["references", "status", "tags", "advanced-tags-all", "advanced-tags-either",
-      "questions-references", "questions-types", "created-by", "mintime", "maxtime",
-      "scoring-type", "authoring-workflow-reference"];
+    // What counts as a filter depends on the block, so derive it from the block's own
+    // fields rather than from a hand-kept list. Everything that is not paging, ordering
+    // or response-shaping narrows the result set.
+    const NON_FILTER = new Set(["limit", "next", "sort", "sort-field"]);
+    const filters = Object.keys(block.fields)
+      .filter((f) => !NON_FILTER.has(f) && !f.startsWith("include-"));
     if (block.paged && !filters.some((f) => request[f] !== undefined)) {
-      specificity.push("No filter is set, so this reads every Item in the bank. Narrow it with references, status, tags or a mintime/maxtime window unless a full extract is what you want.");
+      specificity.push(`No filter is set, so this reads everything ${block.endpoint} returns. Narrow it with ${filters.slice(0, 4).join(", ")} or a mintime/maxtime window unless a full extract is what you want.`);
     }
-    if (request["organisation-id"] === undefined) {
+    if ("organisation-id" in block.fields && request["organisation-id"] === undefined) {
       specificity.push("No Item bank specified (`organisation-id`) — the consumer's primary Item bank is used.");
     }
     if (request.limit === undefined && block.paged) {
@@ -204,6 +207,9 @@ function finalize(rec: any, options: any): any {
     endpoint: block?.endpoint,
     action: block?.action,
     paged: block?.paged,
+    // Which end-of-data signal this endpoint uses. The recipe branches on it; there is
+    // no correct universal loop. See vocab.ts PagingEnd.
+    paging_end: block?.pagingEnd,
     async: block?.async,
     paging: top.paging,
     request,

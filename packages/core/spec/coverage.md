@@ -17,8 +17,12 @@ envelope carries a `meta.versions` object. Both are in `instructions.md` marked 
 un-written tricks that make this dialect worth having are, by definition, absent from the
 documentation — this map tells you where to go looking, never what you will find there.
 
-**Coverage against this denominator: 1 of 57 blocks built** (`itembank/items` + `get`), and 1 of
-57 verified against a live consumer.
+**Coverage against this denominator: 2 of 57 blocks built** — `itembank/items` + `get` and
+`sessions/responses` + `get` — both verified against a live consumer. The second was drawn from a
+DIFFERENT endpoint family on purpose, and it immediately paid: the two families disagree about how
+a paged read ends (`meta.next` disappears at exhaustion on `itembank/*`; on `sessions/*` it is
+always present and an empty page is the signal), so the universal paging rule the dialect had
+shipped never terminates on half the API. See C15 in `conflict-resolution.md`.
 
 ## Totals
 

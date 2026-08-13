@@ -28,10 +28,19 @@ Three details are binary and must be stated exactly:
 **A required section whenever the compiled output has `paged: true`. Never fold it into the Procedure.**
 
 - State the design's declared policy (`paging` in the output) and write the procedure for THAT policy.
-- For `exhaustive`: loop — issue the request, process `data`, and if `meta.next` is present, re-issue **the original request parameters plus the new `next` token**. Terminate ONLY on the absence of `meta.next`.
+- **Read `paging_end` from the compiled output and write the loop THAT endpoint needs. There is no universal paging loop, and each family's rule is a bug in the other.**
+
+  | `paging_end` | Terminate when | Why the other rule fails here |
+  | :-- | :-- | :-- |
+  | `next-absent` | `meta.next` is **absent** | a page can be short while data remains — an over-limit `limit` is silently clamped |
+  | `empty-page` | the page has **zero records** | `meta.next` is ALWAYS present here, so waiting for it to vanish never terminates |
+
+- For `exhaustive`: loop — issue the request, process `data`, then re-issue **the original request parameters plus the new `next` token**, terminating on the signal named above and on nothing else.
+- When `paging_end` is `empty-page`, say why the token persists: it is a **long-poll resumption cursor**, not a more-data flag — it is kept so the caller can re-poll later to pick up records created since. Measured: a request matching exactly one session returned that record WITH a token, and following the token returned zero records and the SAME token again.
 - For `single-page`: state plainly, in the recipe, that the result is not the full match set and that nothing in the response says so.
 - **Always state that `meta.records` counts the page, not the total.** This is the single most important sentence in the recipe. A reader who takes `records` as a total has a number that looks like an answer and is not one. Measured: `meta.records` read `2` on every one of 12 consecutive pages while 24 distinct Items came back.
-- **Terminate on the ABSENCE of `meta.next`, never on a page's size** — and say why, because "stop when the page is short" is the loop most developers write. An over-limit request is **silently clamped**: asking for `limit: 100` returns 50 records, HTTP 200, `meta.status: true`, no error and no indication the limit changed. Every page then looks short while `meta.next` is present throughout, so a size-based loop quits after one page and discards the rest. State this whenever the design's `limit` exceeds the documented maximum, and state it as measured behaviour rather than as a caution.
+- **On a `next-absent` endpoint, never terminate on a page's size** — and say why, because "stop when the page is short" is the loop most developers write. An over-limit request is **silently clamped**: asking for `limit: 100` returns 50 records, HTTP 200, `meta.status: true`, no error and no indication the limit changed. Every page then looks short while `meta.next` is present throughout, so a size-based loop quits after one page and discards the rest. State this whenever the design's `limit` exceeds the maximum, as measured behaviour rather than as a caution.
+- **Never carry a paging rule from one endpoint to another, and never state one as general.** The symmetry is cruel: "stop when the page is empty" is the ONLY correct rule on a `empty-page` endpoint and a data-loss bug on a `next-absent` one. If the recipe covers one endpoint, give one rule and name the endpoint it belongs to.
 - **Never present a terminating loop as self-evidently correct.** Name the wrong loops explicitly: stopping when `data.length < limit`, stopping on `meta.records`, or re-deriving the request between pages instead of carrying the original parameters forward.
 
 ## Gotchas
@@ -48,7 +57,7 @@ A runnable acceptance checklist against THEIR implementation. **Output a NUMBERE
 
 Under these rules:
 
-- **The completeness check is the point, and it must assert on the CURSOR.** "Records came back" passes on a truncated read. The check is that the final response carried no `meta.next` — and, where the caller can obtain an independent count, that the total collected matches it.
+- **The completeness check is the point, and it must assert on the RIGHT end signal.** "Records came back" passes on a truncated read. For `next-absent`, assert the final response carried no `meta.next`. For `empty-page`, assert the final response carried zero records — asserting on the cursor there would never pass, since the token is always present. Where the caller can obtain an independent count, assert the total collected matches it.
 - **A step that cannot fail is not a check.** Before emitting a step, ask what a failing and a passing run each look like for THIS job. If the answer is the same, drop the step.
 - **Do NOT import L0177's differential apparatus.** Loading twice, once with a key omitted, is a remedy for the Author API silently ignoring unknown config. The Data API reports errors; a differential here is ceremony that tests nothing. Assert on the response instead.
 - **Say which steps WRITE, and send them at a scratch target.** For a read this is usually none — say so rather than emitting a hollow warning. For any write, name what it persists and direct the reader to a throwaway reference.

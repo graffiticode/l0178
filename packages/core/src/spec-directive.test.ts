@@ -41,10 +41,22 @@ describe("the directive keeps paging as its own section", () => {
     expect(has(instructions, "counts the CURRENT PAGE, not the total match set")).toBe(true);
   });
 
-  test("it terminates the loop on the ABSENCE of meta.next, never on page size", () => {
-    expect(has(directive, "Terminate ONLY on the absence of")).toBe(true);
-    expect(has(directive, "never on a page's size")).toBe(true);
+  test("termination is PER-ENDPOINT, read from paging_end — never a universal rule", () => {
+    // The rule each family needs is a bug in the other: waiting for meta.next to vanish
+    // never terminates on sessions/*, and stopping on a short page loses data on
+    // itembank/*. A directive that stated either as general would ship a broken loop.
+    expect(has(directive, "There is no universal paging loop")).toBe(true);
+    expect(has(directive, "Read paging_end from the compiled output")).toBe(true);
+    expect(has(directive, "Never carry a paging rule from one endpoint to another")).toBe(true);
     expect(has(directive, "stopping when data.length < limit")).toBe(true);
+  });
+
+  test("both end-of-data signals are spelled out with the reason each is needed", () => {
+    expect(has(directive, "next-absent")).toBe(true);
+    expect(has(directive, "empty-page")).toBe(true);
+    expect(has(directive, "never terminates")).toBe(true);
+    expect(has(directive, "long-poll resumption cursor")).toBe(true);
+    expect(has(instructions, "HOW A LOOP TERMINATES IS NOT THE SAME ACROSS ENDPOINTS")).toBe(true);
   });
 
   test("it carries the measured clamp, which is what makes a size-based loop fail", () => {
@@ -58,9 +70,11 @@ describe("the directive keeps paging as its own section", () => {
     expect(has(directive, "the original request parameters plus the new")).toBe(true);
   });
 
-  test("the completeness check asserts on the cursor, not on records arriving", () => {
+  test("the completeness check asserts on the RIGHT end signal, not on records arriving", () => {
     expect(has(directive, "Records came back")).toBe(true);
     expect(has(directive, "the final response carried no")).toBe(true);
+    // Asserting on the cursor would never pass on an empty-page endpoint.
+    expect(has(directive, "assert the final response carried zero records")).toBe(true);
   });
 
   test("it says a paging check needs a result set larger than limit to mean anything", () => {

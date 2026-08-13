@@ -76,9 +76,32 @@ Item bank.
 
 - A paged response carries a token at **`meta.next` [verified]**. Pass it back with the
   *original* request parameters to get the following page.
-- **`meta.next` is ABSENT exactly when the result set is exhausted [verified]** — measured
-  by requesting three known references at `limit: 2`: page 1 returned 2 with a `next`,
-  page 2 returned 1 with **no** `next`. Its absence is the only end-of-data signal.
+- **⚠ HOW A LOOP TERMINATES IS NOT THE SAME ACROSS ENDPOINTS. There is no universal
+  paging loop [verified, both families].** This is the single most important thing in this
+  file, and getting it wrong is catastrophic in both directions.
+
+  | Family | `meta.next` behaviour | Terminate on |
+  | :-- | :-- | :-- |
+  | `itembank/*` | omitted once the result set is exhausted | the **absence** of `meta.next` |
+  | `sessions/*` | **always present**, even on a zero-record page | an **empty page** |
+
+  For `itembank/*` [verified]: three known references at `limit: 2` gave page 1 with 2
+  records and a `next`, page 2 with 1 record and **no** `next`.
+
+  For `sessions/*` [verified]: one `session_id` at `limit: 10` — a result set of exactly
+  one, with nothing beyond it — still returned a `next`. Following that token returned
+  **zero records and the SAME `next` token again**. On this family `meta.next` is a
+  long-poll resumption cursor, not a more-data flag: you keep it to detect sessions
+  created later. **A loop waiting for it to disappear never terminates.**
+
+  Learnosity's reference states half of this — the `sessions/responses` article notes the
+  token comes back "regardless of whether additional records exist" and that this "differs
+  from other Data API endpoints such as those under the Item bank". It also says the token
+  appears "only when the current result set contains results", which the measurement
+  contradicts: the empty page carried one. See C15 in `conflict-resolution.md`.
+
+  The compiled output carries `paging_end` (`next-absent` or `empty-page`) per block. Read
+  it; never assume.
 - **⚠ `meta.records` counts the CURRENT PAGE, not the total match set [verified].**
   Measured over 12 consecutive pages at `limit: 2`: `meta.records` was `2` on every single
   page while 24 distinct Items came back. A caller who reads `records` and stops has a
@@ -97,9 +120,11 @@ Item bank.
   `data` array. This is the Data API's analogue of the Author API's fail-open — and it is
   worse in one respect, because the caller gets a plausible answer rather than an
   unenforced setting.
-- Consequently: **terminate on the absence of `meta.next`, never on a page's size.** A
-  procedure that reads a paged endpoint MUST state whether it takes one page or loops to
-  exhaustion, and the verification step must assert **the cursor was exhausted**, never
+- Consequently: a procedure that reads a paged endpoint MUST state whether it takes one
+  page or loops to exhaustion, **and must use that endpoint's own end-of-data signal**.
+  Note the cruel symmetry — "stop when the page is short" is the rule that loses data on
+  `itembank/*` and the only correct rule on `sessions/*`. Neither can be stated as a
+  universal. The verification step must assert the loop ended for the RIGHT reason, never
   merely that records came back.
 
 ## 3. The response envelope

@@ -39,12 +39,32 @@ export type Constraint = {
 export type Field = [string, string] | [string, string, Constraint];
 export type Fields = Record<string, Field>;
 
+// How a paged read signals that it is finished. THIS DIFFERS PER ENDPOINT FAMILY, and
+// using the wrong one is catastrophic in both directions — both verified against the
+// live demo consumer, 2026-08-13:
+//
+//   "next-absent"  (itembank/*)  meta.next is omitted once the result set is exhausted.
+//                                Absence is the end signal. Page size means nothing here:
+//                                an over-limit request is silently clamped, so every page
+//                                can look short while more data remains.
+//
+//   "empty-page"   (sessions/*)  meta.next is ALWAYS present — it came back even on a
+//                                zero-record page, and with the same token, because it is
+//                                a long-poll resumption cursor rather than a more-data
+//                                flag. Waiting for it to disappear NEVER TERMINATES. The
+//                                end signal is a page with no records.
+//
+// So the rule the other family needs is the rule that breaks this one. Neither can be
+// stated as a universal, and `paged: true` alone is not enough to write a loop.
+export type PagingEnd = "next-absent" | "empty-page";
+
 export type Block = {
-  endpoint: string;   // Learnosity endpoint path, minus the {LTS_VERSION} prefix
-  action: string;     // one of get | set | update | delete — the closed verb set
-  paged: boolean;     // returns meta.next, so a paging policy is required
-  async: boolean;     // returns { data: { job_reference } } instead of a result
-  article: string;    // Zendesk article id — provenance for every field below
+  endpoint: string;      // Learnosity endpoint path, minus the {LTS_VERSION} prefix
+  action: string;        // one of get | set | update | delete — the closed verb set
+  paged: boolean;        // returns meta.next, so a paging policy is required
+  pagingEnd?: PagingEnd; // required when paged — how the loop knows it is done
+  async: boolean;        // returns { data: { job_reference } } instead of a result
+  article: string;       // Zendesk article id — provenance for every field below
   fields: Fields;
 };
 
@@ -53,14 +73,21 @@ export const HEAD = "data-job";
 
 // Blocks. One keyword per (endpoint, action) pair; exactly one per program.
 //
-// SLICE: only `itembank/items` + `get` is modelled. coverage.md lists the other 56
-// blocks. A block that is not here is not a typo — it is unbuilt, and the compiler
-// says so rather than guessing at its fields.
+// SLICE: 2 of the 57 blocks are modelled — `itembank/items` + `get` and
+// `sessions/responses` + `get`. coverage.md lists the rest. A block that is not here is
+// not a typo — it is unbuilt, and the compiler says so rather than guessing at its
+// fields.
+//
+// The two modelled blocks are deliberately one from each family, because that is what
+// exposed `pagingEnd`: they disagree about how a paged read ends, and a dialect that had
+// only ever seen `itembank/*` would have shipped a universal rule that never terminates
+// on `sessions/*`.
 export const BLOCKS: Record<string, Block> = {
   "items-get": {
     endpoint: "itembank/items",
     action: "get",
     paged: true,
+    pagingEnd: "next-absent",
     async: false,
     article: "26076386828189",
     fields: {
@@ -100,6 +127,43 @@ export const BLOCKS: Record<string, Block> = {
       "mintime": ["mintime", "timestamp"],
       "maxtime": ["maxtime", "timestamp"],
       // paging
+      "limit": ["limit", "number", { max: 50 }],
+      "next": ["next", "string"],
+    },
+  },
+
+  "responses-get": {
+    endpoint: "sessions/responses",
+    action: "get",
+    paged: true,
+    // NOT "next-absent". Measured: meta.next came back on a zero-record page, with the
+    // same token. It is a long-poll resumption cursor here, not a more-data flag.
+    pagingEnd: "empty-page",
+    async: false,
+    article: "26076304385565",
+    fields: {
+      // who / what
+      "session-id": ["session_id", "strings", { maxEntries: 1000 }],
+      "user-id": ["user_id", "strings", { maxEntries: 1000 }],
+      "activity-id": ["activity_id", "strings", { maxEntries: 1000 }],
+      // `status` is a SESSION status here. Same keyword as items-get, disjoint values —
+      // which is why fields are scoped to their block rather than to the dialect.
+      "status": ["status", "strings", {
+        values: ["Incomplete", "Completed", "Discarded", "Pending Scoring"],
+      }],
+      // Three independent time axes: updated, started, submitted. Picking the wrong one
+      // silently changes which sessions match, so each keeps its own keyword.
+      "mintime": ["mintime", "timestamp"],
+      "maxtime": ["maxtime", "timestamp"],
+      "mintime-started": ["mintime_started", "timestamp"],
+      "maxtime-started": ["maxtime_started", "timestamp"],
+      "mintime-completed": ["mintime_completed", "timestamp"],
+      "maxtime-completed": ["maxtime_completed", "timestamp"],
+      // response shaping. The path is doubly nested and the kebab name cannot express
+      // where the separators fall — the sharpest example yet of why paths are recorded.
+      "include-session-metadata": ["include.sessions.session_metadata", "strings"],
+      // ordering and windowing
+      "sort": ["sort", "string", { values: ["asc", "desc"] }],
       "limit": ["limit", "number", { max: 50 }],
       "next": ["next", "string"],
     },

@@ -40,6 +40,7 @@ reader can overturn it with better evidence instead of re-litigating it from scr
 | C12 | Whether verification must be differential | RESOLVED — L0177 only |
 | C13 | Request body encoding | RESOLVED — assumption was wrong |
 | C14 | The "short page" hazard | RESOLVED — re-grounded |
+| C15 | When `meta.next` is returned | RESOLVED — measured, docs half-right |
 
 ---
 
@@ -226,6 +227,42 @@ a status filter never produced a short page with more data behind it, so the mec
 originally stated remains unobserved. The rule survives because **C6 produces the identical
 failure by a measured route** — the clamp makes every page look short. The unevidenced wording was
 removed and the rule now rests on the clamp.
+
+### C15 — When `meta.next` is returned · RESOLVED (measured; the docs are half-right)
+
+The `itembank/items` reference describes `meta.next` as the token to fetch "the next page",
+implying it appears when more data exists — and measurement confirmed that for `itembank/*`:
+absence is exactly exhaustion. Read alone, that generalises to a universal paging loop.
+
+The `sessions/responses` article says something different, and says it only there: the token is
+returned "regardless of whether additional records exist beyond the current page", and notes this
+"differs from other Data API endpoints such as those under the Item bank". Same field, same
+envelope, opposite meaning.
+
+**Resolution.** Both are right about their own family, and the difference is real:
+
+| Family | `meta.next` | End-of-data signal |
+| :-- | :-- | :-- |
+| `itembank/*` | omitted at exhaustion | its **absence** |
+| `sessions/*` | always present | an **empty page** |
+
+Measured on `sessions/responses`: one `session_id` at `limit: 10` — a result set of exactly one,
+nothing beyond it — returned that record WITH a token. Following the token returned **zero records
+and the same token again**. It is a long-poll resumption cursor, kept so a caller can re-poll for
+sessions created later.
+
+**And the sessions article is itself wrong in one clause.** It says the token comes back "only
+when the current result set contains results". The empty page carried one. So the token is not
+merely more-permissive on this family — it is unconditional.
+
+**Why it mattered.** The dialect had shipped "terminate ONLY on the absence of `meta.next`" as a
+universal rule, drawn from the one family it had modelled. On `sessions/*` that loop **never
+terminates**. The inverse is just as bad: "stop when the page is short" is the only correct rule
+on `sessions/*` and a data-loss bug on `itembank/*` (see C6). Neither can be stated generally.
+
+**Depends on it:** `Block.pagingEnd` in `vocab.ts`, `paging_end` in the compiled output, and the
+per-endpoint branch in `spec-directive.md`'s Paging section. This is why the second block modelled
+was deliberately drawn from a different endpoint family.
 
 ---
 

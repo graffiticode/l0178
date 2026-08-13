@@ -17,7 +17,7 @@ function, terminated with `{}` then `..`.
 | Construct | Arity | Shape |
 | :-------- | :---: | :---- |
 | `data-job` | 1 | Head; takes the whole property + block chain. |
-| Blocks: `items-get` | 2 | Take a `[list]` of request fields; select the endpoint and action. |
+| Blocks: `items-get` `responses-get` | 2 | Take a `[list]` of request fields; select the endpoint and action. |
 | `paging` | 2 | Design intent: `EXHAUSTIVE` or `SINGLE-PAGE`. Never sent in a request. |
 | Request fields | 2 | `name value`, chained; the chain ends with `{}`. |
 
@@ -26,9 +26,14 @@ function, terminated with `{}` then `..`.
 One keyword per `(endpoint, action)` pair. A field's legality depends on the pair, not
 on the endpoint alone.
 
-| Block | Endpoint | Action | Paged | Async |
-| :---- | :------- | :----- | :---: | :---: |
-| `items-get` | `itembank/items` | `get` | yes | no |
+| Block | Endpoint | Action | Paged | Ends on | Async |
+| :---- | :------- | :----- | :---: | :--- | :---: |
+| `items-get` | `itembank/items` | `get` | yes | `meta.next` absent | no |
+| `responses-get` | `sessions/responses` | `get` | yes | an empty page | no |
+
+The two disagree about how a paged read finishes, and each family's rule is a bug in the
+other — see Paging below. The compiled output carries `paging_end` so the recipe branches
+rather than assuming.
 
 ## Request fields of `items-get`
 
@@ -59,8 +64,35 @@ because the kebab name alone is ambiguous about its separator.
 | `limit` | `limit` | number (max 50) |
 | `next` | `next` | string — a cursor the API returns, not a value to author |
 
+## Request fields of `responses-get`
+
+| Field | Learnosity path | Type |
+| :---- | :-------------- | :--- |
+| `session-id` | `session_id` | list of strings (max 1000) |
+| `user-id` | `user_id` | list of strings (max 1000) |
+| `activity-id` | `activity_id` | list of strings (max 1000) |
+| `status` | `status` | `Incomplete` `Completed` `Discarded` `Pending Scoring` |
+| `mintime` / `maxtime` | `mintime` / `maxtime` | session UPDATED time |
+| `mintime-started` / `maxtime-started` | `mintime_started` / `maxtime_started` | session START time |
+| `mintime-completed` / `maxtime-completed` | `mintime_completed` / `maxtime_completed` | SUBMISSION time |
+| `include-session-metadata` | `include.sessions.session_metadata` | list of strings |
+| `sort` | `sort` | `asc` `desc` |
+| `limit` | `limit` | number (max 50) |
+| `next` | `next` | string — a cursor the API returns, not a value to author |
+
+Note `status` here is a SESSION status, disjoint from the Item statuses `items-get`
+accepts. The same keyword means different things in different blocks, which is why
+fields are scoped to their block.
+
 ## Paging
 
-`paging` is required on a paged block. `EXHAUSTIVE` follows `meta.next` until it is
-absent; `SINGLE-PAGE` deliberately takes one page and accepts an incomplete result.
-The policy is design intent and never appears in a request.
+`paging` is required on a paged block. `EXHAUSTIVE` reads the whole result set;
+`SINGLE-PAGE` deliberately takes one page and accepts an incomplete result. The policy
+is design intent and never appears in a request.
+
+**How the loop ends is per-endpoint, not universal.** On `itembank/*`, `meta.next` is
+omitted once the result set is exhausted, and page size proves nothing (an over-limit
+`limit` is silently clamped, so pages can look short while data remains). On
+`sessions/*`, `meta.next` is *always* present — it is a long-poll resumption cursor, and
+it comes back even on a zero-record page — so the loop must end on an empty page or it
+never ends at all. Read `paging_end` from the compiled output.

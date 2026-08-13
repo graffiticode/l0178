@@ -226,11 +226,11 @@ describe("progressive disclosure", () => {
     expect(withHole.complete).toBe(false);
     expect(withHole.warnings[0].toLowerCase()).toContain("paged");
     // "no filter set" is an advisory; it must not bury the hole.
-    expect(hasWarning(withHole, "reads every Item in the bank")).toBe(false);
+    expect(hasWarning(withHole, "reads everything itembank/items returns")).toBe(false);
 
     const filled = await compile(`data-job paging EXHAUSTIVE items-get [ {} ] {}..`);
     expect(filled.complete).toBe(true);
-    expect(hasWarning(filled, "reads every Item in the bank")).toBe(true);
+    expect(hasWarning(filled, "reads everything itembank/items returns")).toBe(true);
   });
 
   test("validity warnings surface even while a hole is open", async () => {
@@ -255,6 +255,90 @@ describe("the lexicon", () => {
     // `data` are base names this dialect deliberately did not take.
     for (const base of ["get", "set", "data", "map", "filter", "reduce"]) {
       expect(lexicon[base], `base keyword "${base}" was shadowed`).toBeTruthy();
+    }
+  });
+});
+
+describe("responses-get — the second block, and the second endpoint family", () => {
+  const RESP = `data-job
+    paging EXHAUSTIVE
+    responses-get [
+      activity-id ["numeracy"]
+      status ["Completed"]
+      user-id ["u-1" "u-2"]
+      limit 50
+      {}
+    ]
+    {}..`;
+
+  test("selects its own endpoint and action", async () => {
+    const out = await compile(RESP);
+    expect(out.endpoint).toBe("sessions/responses");
+    expect(out.action).toBe("get");
+    expect(out.paged).toBe(true);
+    expect(out.complete).toBe(true);
+    expect(out.warnings).toEqual([]);
+  });
+
+  test("the doubly-nested include path cannot be derived from its name", async () => {
+    const out = await compile(`data-job paging EXHAUSTIVE responses-get [
+      session-id ["s1"] include-session-metadata ["my_field"] {} ] {}..`);
+    // include-session-metadata -> include.sessions.session_metadata. Nothing about the
+    // kebab name says where the dots and underscores fall, which is the whole argument
+    // for carrying `paths` instead of expanding names in the recipe.
+    expect(out.paths["include-session-metadata"]).toBe("include.sessions.session_metadata");
+    expect(out.paths["session-id"]).toBe("session_id");
+    expect(out.paths["activity-id"]).toBeUndefined();
+  });
+});
+
+describe("the same keyword means different things in different blocks", () => {
+  test("`status` carries disjoint value sets per block", async () => {
+    // Item status vs SESSION status. This is the scoping the two-level registry exists
+    // for — a dialect-wide `status` would have to accept the union and check neither.
+    const items = await compile(`data-job paging EXHAUSTIVE items-get [ status ["published"] {} ] {}..`);
+    const resp = await compile(`data-job paging EXHAUSTIVE responses-get [ status ["Completed"] {} ] {}..`);
+    expect(hasWarning(items, "isn't one of")).toBe(false);
+    expect(hasWarning(resp, "isn't one of")).toBe(false);
+
+    // ...and each rejects the other's vocabulary.
+    const crossed1 = await compile(`data-job paging EXHAUSTIVE items-get [ status ["Completed"] {} ] {}..`);
+    const crossed2 = await compile(`data-job paging EXHAUSTIVE responses-get [ status ["published"] {} ] {}..`);
+    expect(hasWarning(crossed1, "isn't one of")).toBe(true);
+    expect(hasWarning(crossed2, "isn't one of")).toBe(true);
+  });
+
+  test("a field of the other block is dropped with a warning", async () => {
+    const out = await compile(`data-job paging EXHAUSTIVE responses-get [ references ["a"] {} ] {}..`);
+    expect(hasWarning(out, "isn't a request field of this operation")).toBe(true);
+    expect(out.request.references).toBeUndefined();
+  });
+
+  test("advisories name the block's own endpoint, not a hardcoded one", async () => {
+    const out = await compile(`data-job paging EXHAUSTIVE responses-get [ {} ] {}..`);
+    expect(hasWarning(out, "reads everything sessions/responses returns")).toBe(true);
+    // organisation-id is not a field of this block, so its advisory must not fire.
+    expect(hasWarning(out, "primary Item bank")).toBe(false);
+  });
+});
+
+describe("paging_end — how the loop terminates, per endpoint", () => {
+  test("the two families disagree, and the output says which applies", async () => {
+    const items = await compile(`data-job paging EXHAUSTIVE items-get [ references ["a"] {} ] {}..`);
+    const resp = await compile(`data-job paging EXHAUSTIVE responses-get [ session-id ["s"] {} ] {}..`);
+    expect(items.paging_end).toBe("next-absent");
+    expect(resp.paging_end).toBe("empty-page");
+  });
+
+  test("every paged block declares one", async () => {
+    // A paged block without paging_end would leave the recipe to guess, and either guess
+    // is a bug: "wait for next to vanish" never finishes on sessions, and "stop on a
+    // short page" drops data on itembank.
+    for (const [src, blk] of [["items-get [ references [\"a\"] {} ]", "items-get"],
+                              ["responses-get [ session-id [\"s\"] {} ]", "responses-get"]]) {
+      const out = await compile(`data-job paging EXHAUSTIVE ${src} {}..`);
+      expect(out.paged, blk).toBe(true);
+      expect(out.paging_end, `${blk} must declare paging_end`).toBeTruthy();
     }
   });
 });
