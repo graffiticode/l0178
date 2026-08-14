@@ -184,7 +184,12 @@ function finalize(rec: any, options: any): any {
     // What counts as a filter depends on the block, so derive it from the block's own
     // fields rather than from a hand-kept list. Everything that is not paging, ordering
     // or response-shaping narrows the result set.
-    const NON_FILTER = new Set(["limit", "next", "sort", "sort-field"]);
+    // organisation-id and item-pool-id choose the CONTAINER, not the contents — a job
+    // that names only a bank still reads the whole bank, so they must not count as
+    // narrowing or the "reads everything" advisory goes quiet exactly when it matters.
+    const NON_FILTER = new Set([
+      "limit", "next", "sort", "sort-field", "organisation-id", "item-pool-id",
+    ]);
     const filters = Object.keys(block.fields)
       .filter((f) => !NON_FILTER.has(f) && !f.startsWith("include-"));
     if (block.paged && !filters.some((f) => request[f] !== undefined)) {

@@ -342,3 +342,21 @@ describe("paging_end — how the loop terminates, per endpoint", () => {
     }
   });
 });
+
+describe("naming a container is not filtering it", () => {
+  test("organisation-id or item-pool-id alone still warns that it reads everything", async () => {
+    // Choosing WHICH bank is not narrowing WHAT you read from it. Counting them as
+    // filters silenced the advisory in exactly the case it exists for: a job that names
+    // a bank and nothing else.
+    for (const f of ['organisation-id 1', 'item-pool-id "winter-2026"']) {
+      const out = await compile(`data-job paging EXHAUSTIVE items-get [ ${f} limit 50 {} ] {}..`);
+      expect(hasWarning(out, "reads everything itembank/items returns"), f).toBe(true);
+    }
+  });
+
+  test("a real filter alongside a bank silences it", async () => {
+    const out = await compile(`data-job paging EXHAUSTIVE items-get [
+      organisation-id 1 status ["published"] limit 50 {} ] {}..`);
+    expect(hasWarning(out, "reads everything")).toBe(false);
+  });
+});
