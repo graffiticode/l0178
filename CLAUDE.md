@@ -37,9 +37,11 @@ job* (which endpoint, which action, what the request carries); L0178 validates i
 holes as steering warnings, and — via `get_spec` — returns a host-language-neutral developer
 recipe covering signing, paging, the response envelope, and verification.
 
-**Status: early.** One operation is modelled — `itembank/items` + `get` (`items-get`). The
-other 56 documented blocks are in `spec/coverage.md` and are unbuilt, not unsupported; an
-operation absent from the vocabulary must never be guessed at.
+**Status: early.** Two operations are modelled — `itembank/items` + `get` (`items-get`) and
+`sessions/responses` + `get` (`responses-get`). They are deliberately one from each endpoint
+family, because the families disagree about how a paged read ends. The other 55 documented
+blocks are in `spec/coverage.md` and are unbuilt, not unsupported; an operation absent from
+the vocabulary must never be guessed at.
 
 **Paging and transport are [verified]** against Learnosity's public demo Item bank
 (2026-08-13, `learnosity-sdk-nodejs` 0.7.0, `v2025.2.LTS`). Everything else is read off the
@@ -51,7 +53,12 @@ saying what exercised it.
 
 - **`meta.records` counts the page, not the total** — `2` on every one of 12 consecutive
   pages at `limit: 2`, while 24 distinct Items came back.
-- **`meta.next` is absent exactly at exhaustion**, and is the only end-of-data signal.
+- **There is NO universal paging loop.** On `itembank/*`, `meta.next` is absent exactly at
+  exhaustion and its absence is the end signal. On `sessions/*`, `meta.next` is ALWAYS
+  present — it came back on a zero-record page with the same token, because it is a
+  long-poll resumption cursor — so the end signal is an empty page and waiting for the
+  token to vanish never terminates. Each family's rule is a bug in the other. It travels
+  per block as `Block.pagingEnd` / `paging_end`; never state one as general.
 - **`limit` over the maximum is SILENTLY CLAMPED** — `limit: 100` returns 50 records, HTTP
   200, `meta.status: true`, no error. This composes into a data-loss bug: every page then
   looks short while `meta.next` is present, so a "stop on a short page" loop quits after
