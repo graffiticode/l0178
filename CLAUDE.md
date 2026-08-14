@@ -165,10 +165,13 @@ Reports API.
   - Port: 50178 (dev) or `process.env.PORT`
 
 - **`packages/view/`** — `@graffiticode/l0178-view`: React view component. Vite + TypeScript + Tailwind.
-  - `src/components/form/Form.tsx`: renders the compiled job — raw JSON for now. When the
-    vocabulary exists, follow L0177's Form: render the design, whether it is complete, the
-    warnings in compiler order, and every request field beside the API path it resolves to
-  - `src/components/form/ThemeToggle.tsx`: dark/light toggle (inherited scaffolding)
+  - `src/components/form/Form.tsx`: renders the compiled JOB — the operation, whether it
+    is complete, the warnings in compiler order, the paging contract, and every request
+    field beside the exact API path it resolves to. Same shape as L0177's Form. Two things
+    get more room than their size suggests: the PATHS, because kebab names are ambiguous
+    about nesting and the compiler is what settles them; and the PAGING CONTRACT, because
+    the end-of-data signal differs per endpoint and showing the policy without it would be
+    showing half. L0003's ThemeToggle was removed with the JSON dump it belonged to
   - `embed/`: standalone HTML entry built by `vite.embed.config.ts` for embedding in the API's static bundle
   - Built on top of `@graffiticode/l0000-view`
 
