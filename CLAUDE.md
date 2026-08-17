@@ -77,6 +77,9 @@ saying what exercised it.
   than *exceeds the maximum* — the latter reads like the request would be rejected.
 - **Not every response is JSON.** An unversioned URL returns a 404 with a plain-text body,
   so unconditional `.json()` throws a parse error and misdirects the debugging.
+- **Plain `http://` gets a 301, not a 403, and the error you see lies.** A POST that
+  follows the redirect loses its body, so the API answers 41000 "Missing security
+  parameters" about a packet that is fine. Check the scheme before auditing signing. C5.
 - **41003's message is misleading here** — it advises checking the browser's
   `location.hostname`, and there is no browser in a server-to-server call.
 - **The documented `status` default on `jobs` is not real, and following it breaks polling.**

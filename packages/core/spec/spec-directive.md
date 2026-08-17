@@ -67,6 +67,7 @@ The mistakes that produce a wrong answer rather than an error, for THIS job. Alw
 - **A truncated read looks exactly like a complete one** — HTTP 200, `meta.status: true`, a well-formed `data` array. There is no error to catch.
 - **`meta.status` is separate from the HTTP status.** Checking only the HTTP code misses an API-level failure. Log `meta.code`, `meta.message` and `meta.request_uuid` — support asks for the uuid.
 - **Not every response is JSON.** Dropping the LTS version from the URL returns a 404 whose body is plain text, so code that calls `.json()` unconditionally throws a parse error and sends the developer to debug their JSON handling instead of their URL. Check the status before parsing.
+- **A 41000 "Missing security parameters" often means the URL was `http://`, not that the security packet is wrong.** The API 301-redirects plain HTTP; a POST that follows the redirect arrives without its body. Tell the reader to check the scheme before auditing their signing.
 - **A 41003 says the signature did not match, and its message is misleading here** — it advises comparing `security.domain` to the browser's `location.hostname`, and there is no browser in a server-to-server call. Point the reader at the consumer secret and the request serialization instead.
 - **Rate limits are per endpoint, over a 5-second window**, and exhausting a large result set is a burst against a single endpoint. On a 429 (`meta.code` 42000) wait the full window; account for other processes sharing the consumer key.
 - **`meta.versions` reports what actually served the request** (`requested`, `mapped`, `concrete`) — the pinned LTS string is not the running version. Log it; it is what makes "it worked last month" diagnosable.
@@ -146,7 +147,16 @@ Three properties that decide what a correct recipe looks like.
 - **The Data API is not a REST API.** Every call is a `POST`, whatever the operation. The
   verb lives in the `action` body parameter (`get`, `set`, `update`, `delete`), not in the
   HTTP method.
-- **Body content type is `application/json`.**
+- **Two encodings, and they are easy to conflate.** The HTTP request is
+  `application/x-www-form-urlencoded` with `security`, `request` and `action` as form fields;
+  the VALUE of each is a JSON string. The reference's "Body content type: application/json"
+  describes the `request` object, not the HTTP body. The SDK builds both layers — which is
+  another reason not to hand-roll.
+- **⚠ Plain `http://` gets a 301 to HTTPS, and the error a developer actually sees is
+  misleading [verified].** The API redirects rather than refusing, so a client that follows
+  the 301 on a POST drops the body and the API answers **400 / `meta.code` 41000 "Missing
+  security parameters"**. Nothing is wrong with the security packet; the scheme is. The
+  documented 403 for HTTP-instead-of-HTTPS did not reproduce.
 - **The official SDK is mandatory** — it provides the signature generation. Node.js, PHP,
   ASP.NET, Python, Java and Ruby are published. The call shape is
   `DataApi().request(url, securityPacket, consumerSecret, requestBody, action)`
@@ -248,12 +258,13 @@ Observed shape **[verified]** — note `versions`, which the reference does not 
   **403** incorrect authentication details, *or* reaching the API over HTTP instead of
   HTTPS · **409** conflict with the current state of the resource · **410** gone · **429**
   rate limited · **500** server error.
-- **The HTTP-not-HTTPS claim did not reproduce and is UNRESOLVED.** Posting to
-  `http://data.learnosity.com/...` returned **400** with `meta.code` 41000 "Missing
-  security parameters", not the documented 403 — most likely because the redirect to HTTPS
-  dropped the POST body rather than because the API applied a scheme policy. Do not present
-  either code as the reliable signature of an HTTP-scheme mistake. Tracked as **C5** in
-  `conflict-resolution.md`, which records what would close it.
+- **The documented 403 for HTTP-instead-of-HTTPS does not happen [verified].** Plain
+  `http://` gets a **301** to HTTPS (`Location: https://data-va.learnosity.com/...`). A POST
+  that follows the redirect arrives without its body, and the API answers **400 /
+  `meta.code` 41000 "Missing security parameters"** — which sends the developer to audit a
+  security packet that is perfectly correct. Neither 403 nor 400 is the signature of a
+  scheme mistake; the 301 is, and it is invisible to any client that follows redirects.
+  Closed as **C5** in `conflict-resolution.md`.
 
 ### 4. Rate limiting [documented]
 

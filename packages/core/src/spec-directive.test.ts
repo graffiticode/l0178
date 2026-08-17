@@ -223,13 +223,26 @@ describe("the envelope and its traps", () => {
     expect(has(directive, "body is NOT JSON")).toBe(true);
   });
 
-  test("the unreproduced HTTP-vs-HTTPS claim is marked unresolved, not asserted", () => {
-    expect(has(directive, "did not reproduce and is UNRESOLVED")).toBe(true);
-    // An open conflict must stay traceable to the register, which records what would
-    // close it. A claim quietly resolved in favour of whichever source was read last is
-    // the failure this dialect cannot afford.
+  test("the HTTP-scheme mistake is described by what actually happens", () => {
+    // Measured: plain http:// gets a 301, and a POST that follows it loses its body, so
+    // the API reports 41000 "Missing security parameters" about a packet that is fine.
+    // The documented 403 never occurs. Naming the wrong code would send a reader off to
+    // audit their signing.
+    expect(has(directive, "does not happen")).toBe(true);
+    expect(has(directive, "301")).toBe(true);
+    expect(has(directive, "often means the URL was `http://`")).toBe(true);
     expect(has(directive, "conflict-resolution.md")).toBe(true);
-    expect(has(register, "C5 — HTTP-not-HTTPS response code · **OPEN**")).toBe(true);
+    expect(has(register, "C5 — HTTP-not-HTTPS response code · RESOLVED")).toBe(true);
+  });
+
+  test("no conflict is left silently open — the register says which are", () => {
+    // The register's own contract is that an unresolved conflict stays unresolved IN
+    // WRITING. This asserts the table and the entries agree: every row marked OPEN must
+    // have a matching entry heading, so a status can't be quietly downgraded in one place.
+    const rowsOpen = [...register.matchAll(/\| (C\d+) \|[^|]+\|([^|]*)\|/g)]
+      .filter(m => /OPEN/.test(m[2])).map(m => m[1]);
+    const headingsOpen = [...register.matchAll(/### (C\d+) —[^\n]*OPEN/g)].map(m => m[1]);
+    expect(rowsOpen.sort()).toEqual(headingsOpen.sort());
   });
 
   test("rate limits are per endpoint over a 5-second window", () => {

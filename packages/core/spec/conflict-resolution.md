@@ -30,7 +30,7 @@ reader can overturn it with better evidence instead of re-litigating it from scr
 | C2 | `duplicate`: action or path? | RESOLVED — normative field |
 | C3 | `sessions` + `set` documented twice | RESOLVED — both right, discriminated |
 | C4 | Which operations are asynchronous | RESOLVED — reframed |
-| C5 | HTTP-not-HTTPS response code | **OPEN** |
+| C5 | HTTP-not-HTTPS response code | RESOLVED — measured; it is a 301 |
 | C6 | `limit` above the maximum | RESOLVED — measured |
 | C7 | Response envelope shape | RESOLVED — docs incomplete |
 | C8 | What `meta.records` counts | RESOLVED — measured |
@@ -38,7 +38,7 @@ reader can overturn it with better evidence instead of re-litigating it from scr
 | C10 | `domain` means different things per API | RESOLVED — not carried across |
 | C11 | Bare host vs versioned URL | RESOLVED — genuinely opposite |
 | C12 | Whether verification must be differential | RESOLVED — L0177 only |
-| C13 | Request body encoding | RESOLVED — assumption was wrong |
+| C13 | Request body encoding | RESOLVED — both readings were half-right |
 | C14 | The "short page" hazard | RESOLVED — re-grounded |
 | C15 | When `meta.next` is returned | RESOLVED — measured, docs half-right |
 | C16 | `jobs` + `get` `status` default | RESOLVED — measured, docs WRONG |
@@ -104,23 +104,37 @@ redeemed against.
 came from looking only at the `jobs/` paths. It was wrong, and it would have produced a head
 that could not model `itembank/pools` + `set`.
 
-### C5 — HTTP-not-HTTPS response code · **OPEN**
+### C5 — HTTP-not-HTTPS response code · RESOLVED (measured; neither answer was right)
 
-*403 - Troubleshooting* says 403 is returned for "attempting to access endpoints over HTTP
-instead of HTTPS". Posting to `http://data.learnosity.com/v2025.2.LTS/itembank/items` returned
-**HTTP 400** with `meta.code` **41000** "Missing security parameters".
+*403 - Troubleshooting* says 403 is returned for "attempting to access endpoints over HTTP instead
+of HTTPS". An earlier run over `http://` returned **400** with `meta.code` **41000** "Missing
+security parameters", and the entry stayed open on the hypothesis that the redirect had dropped
+the POST body.
 
-**Not resolved.** The most likely explanation is that the redirect to HTTPS dropped the POST
-body, so the observation may say more about the client's redirect handling than about any
-scheme policy in the API. That is a hypothesis, and testing it needs a client that will not
-follow redirects.
+**Resolution — the hypothesis was right, and the documented 403 does not happen at all.** The
+SDK's `httpAdapter` is injectable, so the identical signed, form-encoded request was sent with
+redirect handling under control:
 
-**What the prompts do meanwhile:** neither code is presented as the signature of a scheme
-mistake. `instructions.md` marks the claim UNRESOLVED and carries both observations;
-`spec-directive.md` no longer tells the recipe that a 403 implies HTTP-instead-of-HTTPS.
+| Redirects | Result |
+| :-- | :-- |
+| **not followed** | **HTTP 301** `Location: https://data-va.learnosity.com/...`, nginx HTML body |
+| followed | HTTP 400, `meta.code` 41000 "Missing security parameters" |
+| `https://` control | HTTP 200 |
 
-**To close it:** re-run with redirects disabled, and separately with a client that re-sends the
-body on redirect. If the 400 is a redirect artefact, the documented 403 stands.
+So the API answers plain HTTP with a **301 redirect to HTTPS**, not a 403. The 400 is an artefact
+of the client following a 301 on a POST and dropping the body — standard client behaviour, not an
+API policy.
+
+**The trick worth carrying is the error message.** A developer who uses `http://` sees "Missing
+security parameters. Check the following parameter(s): security" and goes to debug their signing,
+their consumer key, their `security` object — none of which is wrong. The scheme is. This is the
+same failure shape as C9 and C16: the API's own words send you to the wrong place.
+
+Noted but not pursued: the redirect target is `data-va.learnosity.com`, a different host from the
+one requested.
+
+**What the prompts do:** the Gotchas section names the 41000-means-check-your-scheme trap, and
+neither 403 nor 400 is presented as the signature of an HTTP-scheme mistake.
 
 ### C6 — `limit` above the maximum · RESOLVED (measured)
 
@@ -210,15 +224,23 @@ ceremony. `spec-directive.md` refuses it by name, `instructions.md` gives the re
 **This is the clearest case for keeping a register at all:** the conflict is between two of our
 own dialects, and the wrong resolution would have looked like consistency.
 
-### C13 — Request body encoding · RESOLVED (assumption was wrong)
+### C13 — Request body encoding · RESOLVED (both readings were half-right)
 
-An early design note in this project described the Data API request as form-encoded
-(`security` / `request` / `action` as form fields). The reference states `Body content type:
-application/json`.
+An early design note described the Data API request as form-encoded, with `security` / `request` /
+`action` as form fields. The reference says `Body content type: application/json`, and this entry
+originally recorded the assumption as simply wrong.
 
-**Resolution.** JSON. The assumption was never in a shipped file, but it is recorded here because
-it was load-bearing in the design conversation before the sources were read, and because "the
-recipe was built on an unchecked prior" is exactly what this register exists to surface.
+**That resolution was too flat.** Reading the SDK settles it: the HTTP request is sent with
+`Content-Type: application/x-www-form-urlencoded`, and `security`, `request` and `action` are
+URL-encoded form fields whose VALUES are JSON strings. The reference's "Body content type:
+application/json" describes the `request` parameter's own content, not the HTTP body encoding.
+
+So the original assumption was right about the transport and the correction was right about the
+payload. Both, stated alone, mislead — which is why this entry now says so rather than leaving a
+tidy but wrong verdict standing.
+
+**Practical consequence:** nothing, as long as the recipe says to use the SDK, which builds both
+layers. It matters only to a reader hand-rolling the request, and the recipe tells them not to.
 
 ### C14 — The "short page" hazard · RESOLVED (re-grounded)
 

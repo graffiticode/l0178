@@ -31,7 +31,9 @@ Each was chosen to DISAGREE with what was already modelled, and each disagreemen
 paged blocks end their loops by opposite rules (C15); the documented `status` default on `jobs`
 turned out not to exist, so following the reference breaks a polling loop (C16); `set`
 replaces rather than merges, which the reference never states (C18); and the async envelope
-genuinely differs per endpoint rather than one form being a doc error (C17).
+genuinely differs per endpoint rather than one form being a doc error (C17). The register
+now stands at 18 entries with none open — the last, C5, closed on a measurement showing the
+API answers plain HTTP with a 301 rather than the documented 403 (C5).
 
 **Writes are never sent to the public demo account** — it is shared and writes persist. The
 private consumer covers what the demo cannot, and writes land in sandbox bank 386.
