@@ -18,6 +18,7 @@
 // someone adds emphasis trains people to delete the guard.
 import { describe, test, expect } from "vitest";
 import { readFileSync } from "fs";
+import { ARITY1, BLOCKS, PROPERTIES, PAGING_TAGS } from "./vocab.js";
 import { dirname, join } from "path";
 import { fileURLToPath } from "url";
 
@@ -241,5 +242,44 @@ describe("output hygiene", () => {
 
   test("the recipe covers only the operation the design asked for", () => {
     expect(has(directive, "do not cover operations the design did not ask for")).toBe(true);
+  });
+});
+
+/**
+ * instructions.md is the CODE GENERATOR's prompt, and vocab.ts is the definitive vocabulary —
+ * lexicon.ts derives lexicon.json from it, so a word that exists there and not in the instructions
+ * is a word the generator will never emit correctly.
+ *
+ * This dialect shipped for a while with instructions.md containing ZERO of its own vocabulary: no
+ * `data-job`, no `items-get`, 14KB of excellent Data API documentation and nothing about the
+ * language to write it in. The generator did the only thing available and invented a plausible
+ * DSL from the concepts it had been taught — `let request = { endpoint: "itembank/items", action:
+ * tag get, params: {...} }` — which parsed as base-language nonsense and failed every corpus
+ * prompt. The reasoning inside those programs was correct; there was simply nowhere to put it.
+ *
+ * So: every entry vocab.ts exports must appear in the instructions, and no vocabulary table may
+ * claim a keyword the lexicon does not define. Adding a property without documenting it now fails
+ * here rather than in generation.
+ */
+describe("instructions.md documents the whole vocabulary", () => {
+  const instructions = readFileSync(
+    fileURLToPath(new URL("../spec/instructions.md", import.meta.url)), "utf-8",
+  );
+  const all = [...ARITY1, ...Object.keys(BLOCKS), ...PROPERTIES, ...Object.keys(PAGING_TAGS)];
+
+  test("every lexicon keyword appears", () => {
+    const missing = all.filter(k => !new RegExp(`\\b${k.replace(/-/g, "\\-")}\\b`).test(instructions));
+    expect(missing).toEqual([]);
+  });
+
+  test("no table row invents a keyword", () => {
+    const claimed = [...instructions.matchAll(/^\| `([a-z][a-z-]+)`/gm)].map(m => m[1]);
+    expect([...new Set(claimed)].filter(c => !all.includes(c))).toEqual([]);
+  });
+
+  test("the canonical program shape is shown, not just described", () => {
+    expect(instructions).toContain("data-job\n  paging EXHAUSTIVE\n  items-get [");
+    // The shape the generator invented when it had nothing to copy.
+    expect(instructions).toContain("there is no field that names an endpoint");
   });
 });

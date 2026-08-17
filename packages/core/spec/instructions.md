@@ -1,8 +1,186 @@
 <!-- SPDX-License-Identifier: CC-BY-4.0 -->
 
-# L0178 — Learnosity Data API cookbook
+# Dialect L0178 — Learnosity Data API cookbook
 
-## The evidence convention
+L0178 describes a **data job** against the Learnosity Data API — which operation to run,
+what the request carries, and how far it reads. It never calls the API. The client
+describes the job; L0178 validates it, flags holes as steering warnings, and via
+`get_spec` returns a host-language-neutral recipe.
+
+## Program shape
+
+A program is one `data-job` head carrying a paging policy and exactly one **block**
+function, terminated with `{}` then `..`:
+
+```
+data-job
+  paging EXHAUSTIVE
+  items-get [
+    references ["Grade7_ELA_1021" "Grade7_ELA_1022"]
+    status ["published"]
+    include-items ["dt_created" "dt_updated"]
+    organisation-id 123
+    limit 50
+    {}
+  ]
+  {}..
+```
+
+Uniform rules:
+- **`data-job`** is arity 1: it takes the whole property + block chain.
+- **Blocks** (`items-get`, `responses-get`) are arity 2 and take a `[list]` of request
+  fields. Exactly one block per program.
+- **`paging`** is arity 2 and takes `EXHAUSTIVE` or `SINGLE-PAGE` — an UPPERCASE tag, not
+  a quoted string.
+- **Request fields are arity-2 lowercase-kebab functions** — `name value` — that chain;
+  a chain ends with `{}`.
+- **Everything except the block and the paging policy is optional.** An unfiltered read is
+  legal and warns that it reads the whole bank.
+- **An unknown property is a parse error**, not a warning. Warnings are reserved for
+  values and combinations the compiler accepted but wants to steer.
+- Do NOT write `let` bindings, records, or an `endpoint`/`action`/`request` object. The
+  operation is chosen by the BLOCK KEYWORD; there is no field that names an endpoint.
+
+## The block selects the operation (one per program)
+
+One keyword per `(endpoint, action)` pair, because a field's legality depends on the pair
+rather than on the endpoint alone — and because bare `get` and `set` belong to the base
+language.
+
+| Block | Endpoint | Action | Paged | Loop ends on |
+| :---- | :------- | :----- | :---: | :--- |
+| `items-get` | `itembank/items` | `get` | yes | `meta.next` **absent** |
+| `responses-get` | `sessions/responses` | `get` | yes | an **empty page** |
+
+Only these two of the Data API's 57 operations are modelled. A request for any other —
+writes, duplicates, the async job family, `sessions/scores` — must be declined, not
+answered with the nearest built thing.
+
+## `paging` is a required declaration
+
+`EXHAUSTIVE` reads the whole result set; `SINGLE-PAGE` deliberately takes one page and
+accepts an incomplete result. It is design intent and never appears in a request. On a
+paged block its absence is a HOLE — do not choose a policy the request did not state.
+
+## Request fields of `items-get`
+
+| Field | Learnosity path | Type |
+| :---- | :-------------- | :--- |
+| `references` | `references` | list of strings (max 1000) |
+| `status` | `status` | list of `"published"` `"unpublished"` `"archived"` |
+| `created-by` | `created_by` | list of strings |
+| `scoring-type` | `scoring_type` | `per-question` `per-dichotomous` `dependent` |
+| `item-pool-id` | `item_pool_id` | string |
+| `organisation-id` | `organisation_id` | number |
+| `authoring-workflow-reference` | `authoring_workflow.reference` | string |
+| `authoring-workflow-states` | `authoring_workflow.states` | list of strings |
+| `questions-references` | `questions.references` | list of strings (max 1000) |
+| `questions-types` | `questions.types` | list of strings |
+| `tags` | `tags` | TagsV2 records `{type: "…", name: "…"}` |
+| `advanced-tags-all` | `advanced_tags.all` | TagsV2 records |
+| `advanced-tags-either` | `advanced_tags.either` | TagsV2 records |
+| `advanced-tags-none` | `advanced_tags.none` | TagsV2 records |
+| `include-items` | `include.items` | list of response properties to return |
+| `sort` | `sort` | `asc` `desc` |
+| `sort-field` | `sort_field` | `created` `updated` `reference` `title` |
+| `mintime` / `maxtime` | `mintime` / `maxtime` | Unix integer or ISO 8601 string |
+| `limit` | `limit` | number (max 50 — above it is silently clamped) |
+| `next` | `next` | string — a cursor the API RETURNS, not a value to author |
+
+## Request fields of `responses-get`
+
+| Field | Learnosity path | Type |
+| :---- | :-------------- | :--- |
+| `session-id` | `session_id` | list of strings (max 1000) |
+| `user-id` | `user_id` | list of strings (max 1000) |
+| `activity-id` | `activity_id` | list of strings (max 1000) |
+| `status` | `status` | list of `"Incomplete"` `"Completed"` `"Discarded"` `"Pending Scoring"` |
+| `mintime` / `maxtime` | `mintime` / `maxtime` | session UPDATED time |
+| `mintime-started` / `maxtime-started` | `mintime_started` / `maxtime_started` | session START time |
+| `mintime-completed` / `maxtime-completed` | `mintime_completed` / `maxtime_completed` | SUBMISSION time |
+| `include-session-metadata` | `include.sessions.session_metadata` | list of strings |
+| `sort` | `sort` | `asc` `desc` |
+| `limit` | `limit` | number (max 50) |
+| `next` | `next` | string — a cursor the API RETURNS, not a value to author |
+
+`status` here is a SESSION status, disjoint from the Item statuses `items-get` accepts.
+The same keyword means different things in different blocks, which is why fields are
+scoped to their block: a field the block does not define is a parse error.
+
+## Warnings are repair signals
+
+The compiler returns `data.warnings` — imperative, specific steering hints. **Holes
+(a missing paging policy on a paged block) come first**; once filled, advisories surface
+(an unfiltered read, an over-maximum `limit`, a hand-authored `next`). The client reads
+them and refines via `update_item` until the job is complete.
+
+## `data.paths` gives the exact Learnosity paths — use them verbatim
+
+Each field's exact path is recorded in the compiled output's `paths` map, because the
+kebab name alone cannot say whether a hyphen was a `.` or a `_` (`include-items` is
+`include.items`, but `created-by` is `created_by`). The recipe copies those values; it
+never derives a path from a field name.
+
+## Examples
+
+One page, for a look at the shape of the data:
+
+```
+data-job
+  paging SINGLE-PAGE
+  items-get [
+    status ["archived"]
+    organisation-id 4021
+    limit 50
+    {}
+  ]
+  {}..
+```
+
+Everything matching, newest first:
+
+```
+data-job
+  paging EXHAUSTIVE
+  items-get [
+    created-by ["author-99"]
+    mintime "2026-01-01"
+    sort desc
+    sort-field created
+    {}
+  ]
+  {}..
+```
+
+Session responses for one activity, read to exhaustion:
+
+```
+data-job
+  paging EXHAUSTIVE
+  responses-get [
+    activity-id ["numeracy"]
+    status ["Completed"]
+    mintime-completed "2026-01-01"
+    {}
+  ]
+  {}..
+```
+
+A request that names no reading intent yields the paging hole rather than a guess:
+
+```
+data-job
+  items-get [
+    status ["published"]
+    organisation-id 123
+    {}
+  ]
+  {}..
+```
+
+## Canonical Learnosity Data API knowledge (the recipe draws on this)
+
+### The evidence convention
 
 Read this before adding anything below it.
 
@@ -21,7 +199,7 @@ Read this before adding anything below it.
 - A verified fact is verified for the DEMO ITEM BANK. It says the mechanism behaves that
   way; it does not say the reader's own consumer, bank or LTS version does.
 
-## What makes this API different from L0177's
+### What makes this API different from L0177's
 
 Architectural, not empirical, and it determines which of L0177's rules may be reused.
 
@@ -37,7 +215,7 @@ Architectural, not empirical, and it determines which of L0177's rules may be re
   would manufacture ceremony that teaches a reader nothing.
 - **The real trap here is silent incompleteness, not silent non-enforcement.** See Paging.
 
-## 1. Signing and transport
+### 1. Signing and transport
 
 - **Endpoint URL is VERSIONED [verified]**:
   `https://data.learnosity.com/{LTS_VERSION}/{endpoint}`, e.g.
@@ -68,7 +246,7 @@ Architectural, not empirical, and it determines which of L0177's rules may be re
   it is the one signing invariant expected to hold across every Learnosity API, but it has
   not been confirmed here, so present it as documented.
 
-## 2. Paging — the section that matters most
+### 2. Paging — the section that matters most
 
 This is why the dialect exists. **A truncated read is indistinguishable from a complete
 one unless you look for it.** Every claim in this section was measured against the demo
@@ -127,7 +305,7 @@ Item bank.
   universal. The verification step must assert the loop ended for the RIGHT reason, never
   merely that records came back.
 
-## 3. The response envelope
+### 3. The response envelope
 
 Observed shape **[verified]** — note `versions`, which the reference does not show:
 
@@ -164,7 +342,7 @@ Observed shape **[verified]** — note `versions`, which the reference does not 
   either code as the reliable signature of an HTTP-scheme mistake. Tracked as **C5** in
   `conflict-resolution.md`, which records what would close it.
 
-## 4. Rate limiting [documented]
+### 4. Rate limiting [documented]
 
 - Limits are per consumer key, over a **5-second window**. Exceeding one returns **HTTP
   429** with `meta.code` **42000**.
@@ -177,7 +355,7 @@ Observed shape **[verified]** — note `versions`, which the reference does not 
 - This interacts with paging: exhausting a large result set is a burst of requests to one
   endpoint, which is exactly the shape a per-endpoint quota governs.
 
-## 5. Endpoints and actions [documented]
+### 5. Endpoints and actions [documented]
 
 - Actions are a closed set of four: `get`, `set`, `update`, `delete`.
 - **The action verb does not tell you whether an operation writes.**
@@ -191,7 +369,7 @@ Observed shape **[verified]** — note `versions`, which the reference does not 
   `sessions` + `set` is discriminated on `data_format` (`failed_submission` takes a
   base64 string array; `from_template` takes session objects).
 
-## 6. Async operations [documented]
+### 6. Async operations [documented]
 
 - **13 of the 57 documented operations do not return a result.** They return
   `{ "data": { "job_reference": "…" } }` and complete asynchronously.
@@ -204,7 +382,7 @@ Observed shape **[verified]** — note `versions`, which the reference does not 
 - `itembank/items` + `get` — the operation this dialect currently models — is **paged and
   synchronous**.
 
-## 7. Write safety — recipe content only
+### 7. Write safety — recipe content only
 
 L0178 never writes. These are things the recipe must tell a developer, not things this
 dialect does.
