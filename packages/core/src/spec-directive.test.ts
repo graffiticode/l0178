@@ -85,21 +85,23 @@ describe("the directive keeps paging as its own section", () => {
 
 describe("the directive refuses L0177's differential apparatus", () => {
   test("it names the differential rule and says not to import it", () => {
-    expect(has(directive, "Do NOT import")).toBe(true);
-    expect(has(directive, "differential")).toBe(true);
+    expect(has(directive, "never on a differential")).toBe(true);
+    expect(has(directive, "tests nothing here")).toBe(true);
   });
 
-  test("it gives the reason — this API reports errors rather than failing open", () => {
-    expect(has(directive, "The Data API reports errors")).toBe(true);
-    expect(has(instructions, "It does not fail open")).toBe(true);
-    expect(has(instructions, "Do not copy the differential apparatus")).toBe(true);
+  test("it states the positive rule — read the envelope — with no sibling dialect named", () => {
+    // Stated as a property of THIS API. A contrast against another dialect is knowledge
+    // about a product the reader never asked about, and the code generator, whose RAG rows
+    // are language-scoped, has no exposure to the pattern being warned off.
+    expect(has(directive, "Errors are reported, not swallowed")).toBe(true);
+    expect(has(directive, "reading meta.status")).toBe(true);
   });
 });
 
 describe("transport rules that are binary", () => {
-  test("the URL is versioned — the opposite of the Author API's bare host", () => {
+  test("the URL is versioned, and a bare host is stated to be invalid", () => {
     expect(has(directive, "The URL is VERSIONED")).toBe(true);
-    expect(has(instructions, "OPPOSITE of the Author API")).toBe(true);
+    expect(has(directive, "a bare host is not a valid Data API endpoint")).toBe(true);
   });
 
   test("every call is a POST, and the directive says why a reader gets this wrong", () => {
@@ -116,7 +118,7 @@ describe("transport rules that are binary", () => {
 describe("the envelope and its traps", () => {
   test("meta.status is called out as separate from the HTTP status", () => {
     expect(has(directive, "meta.status` is separate from the HTTP status")).toBe(true);
-    expect(has(instructions, "separate from the HTTP status")).toBe(true);
+    expect(has(directive, "separate from the HTTP status")).toBe(true);
   });
 
   test("a truncated read is named as indistinguishable from a complete one", () => {
@@ -127,26 +129,26 @@ describe("the envelope and its traps", () => {
     // Measured: a bad secret returns 403/41003 whose message tells you to compare
     // security.domain with the browser's location.hostname. There is no browser here.
     expect(has(directive, "its message is misleading here")).toBe(true);
-    expect(has(instructions, "There is no browser in a Data API call")).toBe(true);
+    expect(has(directive, "There is no browser in a Data API call")).toBe(true);
   });
 
   test("not every response is JSON, and the directive says so", () => {
     expect(has(directive, "Not every response is JSON")).toBe(true);
-    expect(has(instructions, "body is NOT JSON")).toBe(true);
+    expect(has(directive, "body is NOT JSON")).toBe(true);
   });
 
   test("the unreproduced HTTP-vs-HTTPS claim is marked unresolved, not asserted", () => {
-    expect(has(instructions, "did not reproduce and is UNRESOLVED")).toBe(true);
+    expect(has(directive, "did not reproduce and is UNRESOLVED")).toBe(true);
     // An open conflict must stay traceable to the register, which records what would
     // close it. A claim quietly resolved in favour of whichever source was read last is
     // the failure this dialect cannot afford.
-    expect(has(instructions, "conflict-resolution.md")).toBe(true);
+    expect(has(directive, "conflict-resolution.md")).toBe(true);
     expect(has(register, "C5 — HTTP-not-HTTPS response code · **OPEN**")).toBe(true);
   });
 
   test("rate limits are per endpoint over a 5-second window", () => {
     expect(has(directive, "per endpoint, over a 5-second window")).toBe(true);
-    expect(has(instructions, "Limits are per individual endpoint")).toBe(true);
+    expect(has(directive, "Limits are per individual endpoint")).toBe(true);
   });
 });
 
@@ -173,12 +175,12 @@ describe("paths and naming", () => {
 describe("facts that stop a wrong recipe", () => {
   test("read-vs-write is never inferred from the action verb", () => {
     expect(has(directive, "Never infer read-vs-write from the action verb")).toBe(true);
-    expect(has(instructions, "does not tell you whether an operation writes")).toBe(true);
+    expect(has(directive, "does not tell you whether an operation writes")).toBe(true);
   });
 
   test("an async job gets a polling loop, not a paging loop", () => {
     expect(has(directive, "Write the polling loop instead of a paging loop")).toBe(true);
-    expect(has(instructions, "Paging and async are disjoint")).toBe(true);
+    expect(has(directive, "Paging and async are disjoint")).toBe(true);
   });
 
   test("`next` is a cursor, never authored", () => {
@@ -188,18 +190,18 @@ describe("facts that stop a wrong recipe", () => {
 
 describe("honesty about evidence", () => {
   test("the evidence convention distinguishes verified from documented", () => {
-    expect(has(instructions, "[verified]")).toBe(true);
-    expect(has(instructions, "[documented]")).toBe(true);
-    expect(has(instructions, "exercised END TO END")).toBe(true);
+    expect(has(directive, "[verified]")).toBe(true);
+    expect(has(directive, "[documented]")).toBe(true);
+    expect(has(directive, "exercised END TO END")).toBe(true);
   });
 
   test("verified facts carry their provenance", () => {
-    expect(has(instructions, "public demo")).toBe(true);
-    expect(has(instructions, "learnosity-sdk-nodejs")).toBe(true);
+    expect(has(directive, "public demo")).toBe(true);
+    expect(has(directive, "learnosity-sdk-nodejs")).toBe(true);
   });
 
   test("a demo-bank verification is not overstated as a promise to the reader", () => {
-    expect(has(instructions, "verified for the DEMO ITEM BANK")).toBe(true);
+    expect(has(directive, "verified for the DEMO ITEM BANK")).toBe(true);
     expect(has(directive, "never let a fact verified on the demo bank read as a promise")).toBe(true);
   });
 
@@ -307,5 +309,32 @@ describe("instructions.md shows the form of enumerated values", () => {
     for (const v of ['`"asc"`', '`"desc"`', '`"per-dichotomous"`', '`"title"`', '`["published"]`']) {
       expect(instructions).toContain(v);
     }
+  });
+
+  /**
+   * The rule above was already stated and correct when an EXAMPLE below it still wrote
+   * `sort desc` / `sort-field created` bare — a program that cannot compile, sitting in the
+   * section the generator pattern-matches hardest. Stating a rule and demonstrating its
+   * violation is worse than saying nothing: the demonstration wins.
+   */
+  test("no fenced example writes an enumerated value bare", () => {
+    const raw = readFileSync(
+      fileURLToPath(new URL("../spec/instructions.md", import.meta.url)), "utf-8",
+    );
+    // Value-constrained fields are declared per block as [path, type, { values }].
+    const valued = Object.values(BLOCKS).flatMap((b: any) =>
+      Object.entries(b.fields)
+        .filter(([, f]: [string, any]) => f[1] === "string" && Array.isArray(f[2]?.values))
+        .map(([name]) => name));
+    expect(valued.length).toBeGreaterThan(0);
+    const offenders: string[] = [];
+    for (const fence of raw.match(/```[\s\S]*?```/g) || []) {
+      for (const line of fence.split("\n")) {
+        const m = line.match(/^\s*([a-z][a-z0-9-]*)\s+(\S+)/);
+        // A value-constrained field followed by anything that is not a quote or a `[` list.
+        if (m && valued.includes(m[1]) && !/^["[]/.test(m[2])) offenders.push(line.trim());
+      }
+    }
+    expect(offenders).toEqual([]);
   });
 });
