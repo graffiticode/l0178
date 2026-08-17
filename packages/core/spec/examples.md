@@ -6,7 +6,7 @@ the generator to produce examples organically; the programs they yield are the c
 
 They are phrased the way a developer actually asks — data they need out of a Learnosity bank, and
 what they intend to do about it — not as descriptions of the vocabulary. Between them they should
-reach every part of the modelled surface: all four blocks, every filter, the three session time axes,
+reach every part of the modelled surface: all five blocks, every filter, the three session time axes,
 response shaping, both paging policies, and the asynchronous job shape.
 
 **Every prompt here must yield a program worth RETRIEVING.** A RAG row is a bare prompt-and-code
@@ -78,15 +78,29 @@ and the poll is its own job — a request describing both halves yields two prog
 33. List the jobs created in the last hour so I can see what our nightly export is doing.
 34. Build an offline package for these 12 items, returning only the reference and status of the job.
 
+## Writing Items — `items-set`
+
+A write always carries advisories — that it persists, and that `set` replaces rather than
+merges. Those ride alongside a correct program; they are not defects in it. Each prompt names
+the bank, because writing to the wrong one is the mistake that cannot be undone.
+
+35. Publish item alg-quad-3 into bank 386 with the definition from our authoring pipeline.
+36. Write these three items into bank 386 and make them live for delivery.
+37. Update the title and description of item calc-limit-2 in bank 386, keeping everything else it has.
+38. Load our nightly batch of 40 items into bank 386 as unpublished drafts for review.
+39. Archive item L0178_TEST_1 in bank 386 so it stops appearing in the author's list.
+40. Rename item old-ref-7 to alg-quad-3 in bank 386.
+41. Write item bio-cell-4 into bank 386 tagged Subject: Biology and Grade: 9, published.
+
 ## Requests that raise an advisory warning
 
 Legitimate jobs the compiler accepts but wants to steer. The programs they yield are correct and
 worth retrieving; the warning is advisory and rides alongside, not a defect in the code.
 
-35. Get every Item that is NOT tagged Grade: 5 from bank 88.
-36. Fetch all Items whose workflow state is Approved.
-37. Read all the Items in the bank — no filter, just everything we have.
-38. Pull all the published Items — I don't know our bank id, just use the default one.
+42. Get every Item that is NOT tagged Grade: 5 from bank 88.
+43. Fetch all Items whose workflow state is Approved.
+44. Read all the Items in the bank — no filter, just everything we have.
+45. Pull all the published Items — I don't know our bank id, just use the default one.
 
 ## Under-specified requests (the compiler should flag the holes)
 
@@ -94,8 +108,8 @@ These withhold the reading intent on purpose — they are the counterpart to eve
 the programs they yield should carry holes, not an invented paging policy. Do not "fix" them by
 choosing exhaustive.
 
-39. Get the published Items from bank 123.
-40. I need the session responses for activity numeracy.
-41. Fetch Items tagged Subject: Science.
-42. Read the responses for user student_0001.
+46. Get the published Items from bank 123.
+47. I need the session responses for activity numeracy.
+48. Fetch Items tagged Subject: Science.
+49. Read the responses for user student_0001.
 

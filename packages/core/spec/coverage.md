@@ -17,19 +17,20 @@ envelope carries a `meta.versions` object. Both are in `instructions.md` marked 
 un-written tricks that make this dialect worth having are, by definition, absent from the
 documentation — this map tells you where to go looking, never what you will find there.
 
-**Coverage against this denominator: 4 of 57 blocks built**, all verified live:
+**Coverage against this denominator: 5 of 57 blocks built**, all verified live:
 
-| Block | Family | Shape | Verified against |
-| :-- | :-- | :-- | :-- |
-| `itembank/items` + `get` | itembank | paged, ends on an absent cursor | public demo bank |
-| `sessions/responses` + `get` | sessions | paged, ends on an empty page | public demo bank |
-| `jobs` + `get` | jobs | not paged; the async polling channel | private consumer, sandbox 386 |
-| `itembank/offlinepackage` + `get` | itembank | **async** — returns a job reference | private consumer, sandbox 386 |
+| Block | Shape | Verified against |
+| :-- | :-- | :-- |
+| `itembank/items` + `get` | paged, ends on an absent cursor | public demo bank |
+| `sessions/responses` + `get` | paged, ends on an empty page | public demo bank |
+| `jobs` + `get` | not paged; the async polling channel | private consumer, sandbox 386 |
+| `itembank/offlinepackage` + `get` | **async** — returns a job reference | private consumer, sandbox 386 |
+| `itembank/items` + `set` | **writes**; replaces rather than merges | private consumer, sandbox 386 |
 
 Each was chosen to DISAGREE with what was already modelled, and each disagreement paid: the two
-paged blocks end their loops by opposite rules (C15), and the async pair showed that the
-documented `status` default on `jobs` is not real, so following the reference is what breaks a
-polling loop (C16).
+paged blocks end their loops by opposite rules (C15); the documented `status` default on `jobs`
+turned out not to exist, so following the reference breaks a polling loop (C16); and `set`
+replaces rather than merges, which the reference never states (C18).
 
 **Writes are never sent to the public demo account** — it is shared and writes persist. The
 private consumer covers what the demo cannot, and writes land in sandbox bank 386.

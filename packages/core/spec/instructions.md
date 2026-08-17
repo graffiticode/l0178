@@ -56,8 +56,9 @@ language.
 | `responses-get` | `sessions/responses` | `get` | yes | an **empty page** | no |
 | `jobs-get` | `jobs` | `get` | no | — | no |
 | `offlinepackage-get` | `itembank/offlinepackage` | `get` | no | — | **yes** |
+| `items-set` | `itembank/items` | `set` | no | — | no |
 
-Only these four of the Data API's 57 operations are modelled. A request for any other —
+Only these five of the Data API's 57 operations are modelled. A request for any other —
 writes, duplicates, `sessions/scores` — must be declined, not answered with the nearest
 built thing.
 
@@ -149,6 +150,28 @@ scoped to their block: a field the block does not define is a parse error.
 
 Learnosity also documents `item_references` on this endpoint. It is **deprecated** in favour
 of `items` and is deliberately not modelled; do not reach for it.
+
+## Request fields of `items-set` (this one WRITES)
+
+| Field | Learnosity path | Type |
+| :---- | :-------------- | :--- |
+| `organisation-id` | `organisation_id` | number |
+| `items` | `items` | list of records, max 50; each needs `reference` and `definition` |
+
+Each entry accepts: `reference`, `new-reference`, `title`, `description`, `source`, `note`,
+`status`, `tags`, `features`, `questions`, `metadata-acknowledgements`,
+`metadata-scoring-type`, `adaptive-difficulty`, `authoring-workflow-reference`,
+`authoring-workflow-state`, and the unmodelled `definition`, `dynamic-content-data` and
+`workflow`.
+
+Three things to carry into any request that uses this block:
+
+- **`set` REPLACES an Item.** A field left out of the payload is cleared, not preserved. So
+  a request to "change the title" must still send everything else the Item should keep.
+- **`status` defaults to `unpublished`**, and an unpublished Item cannot be delivered. If a
+  request wants the Item usable, it must say `status: "published"`.
+- **`definition` is required and carries item CONTENT**, which this dialect does not model.
+  It is passed through unchecked. Content is composed in L0176; this dialect moves it.
 
 ## Polling an async operation
 

@@ -83,6 +83,47 @@ describe("the directive keeps paging as its own section", () => {
   });
 });
 
+describe("the directive gives writes their own section", () => {
+  test("Write safety is a required section when the job writes", () => {
+    expect(has(directive, "## Write safety")).toBe(true);
+    expect(has(directive, "writes: true")).toBe(true);
+    expect(has(directive, "Never fold it into the Procedure")).toBe(true);
+  });
+
+  test("it leads with REPLACE semantics and names the loop that loses data", () => {
+    // The single worst write hazard: read-modify-write silently clears every field not
+    // resent, and the response cannot warn you because it echoes nothing.
+    expect(has(directive, "set REPLACES")).toBe(true);
+    expect(has(directive, "is CLEARED, not left alone")).toBe(true);
+    expect(has(directive, "destroys every field not resent")).toBe(true);
+    expect(has(instructions, "A field left out of the payload is cleared")).toBe(true);
+  });
+
+  test("it says the response proves nothing and requires a re-read", () => {
+    expect(has(directive, "data: []")).toBe(true);
+    expect(has(directive, "Confirmation is a re-read")).toBe(true);
+  });
+
+  test("it states the unpublished default and its consequence", () => {
+    expect(has(directive, "it becomes `unpublished`")).toBe(true);
+    expect(has(directive, "cannot be delivered")).toBe(true);
+  });
+
+  test("first runs are directed at a scratch bank", () => {
+    expect(has(directive, "scratch bank")).toBe(true);
+  });
+
+  test("definition is handed off rather than described", () => {
+    // It carries item content this dialect does not model. Inventing its shape is the
+    // failure mode; L0176 composes it.
+    expect(has(directive, "do not attempt to describe or invent its shape")).toBe(true);
+  });
+
+  test("the untested batch maximum is marked untested", () => {
+    expect(has(directive, "Batch maximum is 50 entries. Documented; **untested**")).toBe(true);
+  });
+});
+
 describe("the directive gives async its own section", () => {
   test("Polling is a required section, and never emitted alongside Paging", () => {
     expect(has(directive, "## Polling")).toBe(true);

@@ -17,7 +17,7 @@ function, terminated with `{}` then `..`.
 | Construct | Arity | Shape |
 | :-------- | :---: | :---- |
 | `data-job` | 1 | Head; takes the whole property + block chain. |
-| Blocks: `items-get` `responses-get` `jobs-get` `offlinepackage-get` | 2 | Take a `[list]` of request fields; select the endpoint and action. |
+| Blocks: `items-get` `items-set` `responses-get` `jobs-get` `offlinepackage-get` | 2 | Take a `[list]` of request fields; select the endpoint and action. |
 | `paging` | 2 | Design intent: `EXHAUSTIVE` or `SINGLE-PAGE`. Never sent in a request. |
 | Request fields | 2 | `name value`, chained; the chain ends with `{}`. |
 
@@ -32,6 +32,7 @@ on the endpoint alone.
 | `responses-get` | `sessions/responses` | `get` | yes | an empty page | no |
 | `jobs-get` | `jobs` | `get` | no | — | no |
 | `offlinepackage-get` | `itembank/offlinepackage` | `get` | no | — | **yes** |
+| `items-set` | `itembank/items` | `set` | no | — | no |
 
 The two disagree about how a paged read finishes, and each family's rule is a bug in the
 other — see Paging below. The compiled output carries `paging_end` so the recipe branches
@@ -105,6 +106,22 @@ fields are scoped to their block.
 | `activity-references` | `activity_references` | list of strings (max 1000) |
 | `items` | `items` | list of records `{id, reference, organisation-id?}`; `reference` required |
 | `base-directory` | `base_directory` | string |
+
+## Request fields of `items-set` (WRITES)
+
+| Field | Learnosity path | Type |
+| :---- | :-------------- | :--- |
+| `organisation-id` | `organisation_id` | number |
+| `items` | `items` | list of records, max 50; each needs `reference` and `definition` |
+
+Entry keys: `reference`, `new-reference`, `title`, `description`, `source`, `note`, `status`,
+`tags`, `features`, `questions`, `metadata-acknowledgements`, `metadata-scoring-type`,
+`adaptive-difficulty`, `authoring-workflow-reference`, `authoring-workflow-state`, plus the
+unmodelled `definition`, `dynamic-content-data`, `workflow`.
+
+**`set` replaces rather than merges** — a field omitted from the payload is cleared. `status`
+defaults to `unpublished`, which makes the Item undeliverable. `definition` is required, carries
+item content this dialect does not model, and passes through unchecked.
 
 ## Async
 

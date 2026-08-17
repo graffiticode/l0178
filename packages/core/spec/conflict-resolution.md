@@ -43,6 +43,7 @@ reader can overturn it with better evidence instead of re-litigating it from scr
 | C15 | When `meta.next` is returned | RESOLVED — measured, docs half-right |
 | C16 | `jobs` + `get` `status` default | RESOLVED — measured, docs WRONG |
 | C17 | Shape of the async `data` envelope | PARTLY OPEN — one side measured |
+| C18 | Whether `set` merges or replaces | RESOLVED — measured; docs silent |
 
 ---
 
@@ -310,12 +311,36 @@ endpoint and tells the recipe not to generalise a single envelope shape across e
 **To close it:** fire one `sessions` + `set` at sandbox 386 with a throwaway payload and read the
 envelope.
 
+### C18 — Whether `set` merges or replaces · RESOLVED (measured; the reference never says)
+
+The `itembank/items` + `set` reference lists the Item properties and marks several optional. It
+does not say what happens to a property that is left out of the payload. The natural reading of
+"optional" is *omit it and it stays as it was* — which is how nearly every partial-update API a
+developer has met behaves.
+
+**Resolution — `set` REPLACES.** Measured on sandbox 386: an Item created with `description` and
+`note`, then written again with only `reference`, `title` and `definition`, came back with
+`description: ""` and `note: null`. Omitted fields are cleared. `meta.status` was `true` both
+times; nothing in either response mentions it.
+
+**Why it is the worst of the write hazards.** The read-modify-write loop is the obvious way to
+change one field, and here it silently destroys every field not resent. The response cannot warn
+you either — a successful `set` returns `data: []`, so there is nothing to compare against.
+
+**Depends on it:** the Write safety section of `spec-directive.md`, which leads with replace
+semantics, and the compiler's write advisories.
+
+**Related, and not a conflict:** `status` defaulting to `unpublished` IS documented, as is the
+requirement that an Item be published to be delivered. It is recorded as a trap rather than a
+contradiction — the two facts are simply far apart in the reference, and their combination is
+what bites.
+
 ---
 
 ## Caveat on "measured"
 
 Measurements come from two consumers, and each entry says which. C1–C15 were taken against
-**Learnosity's public demo Item bank** on 2026-08-13; C16–C17 against a **private consumer on
+**Learnosity's public demo Item bank** on 2026-08-13; C16–C18 against a **private consumer on
 sandbox Item bank 386** on 2026-08-17. Both used `learnosity-sdk-nodejs` 0.7.0 against
 `v2025.2.LTS` (concrete `v1.79.5`).
 

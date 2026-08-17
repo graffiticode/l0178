@@ -52,6 +52,16 @@ Three details are binary and must be stated exactly:
 - Terminate on a **terminal status** — `completed` or `halted` — not on records appearing, and not on a fixed number of attempts.
 - Give the loop a backstop and name it: a poll that never sees a terminal status must fail loudly rather than spin, and the per-endpoint rate limit applies to the polling endpoint too.
 
+## Write safety
+**A required section whenever the compiled output has `writes: true`. Never fold it into the Procedure — a reader who skims past it loses data.**
+
+- **Lead with the fact that `set` REPLACES.** A field omitted from the payload is CLEARED, not left alone. State plainly that the natural read-modify-write — fetch the Item, change one field, send that field back — destroys every field not resent, and that the request succeeds while doing it. Tell the reader to send the Item whole.
+- **Say the response proves nothing.** A successful write returns `data: []`; it does not echo what landed. Confirmation is a re-read, and the verification checklist must contain one.
+- **Say what `status` does when omitted** — it becomes `unpublished`, and an unpublished Item cannot be delivered. If the job intends the Item to be usable, `status: "published"` has to be explicit.
+- **Direct every first run at a scratch bank**, never the bank that holds real content, and say so before the procedure rather than after it.
+- If the design sets `new-reference`, say it RENAMES and that anything referring to the old reference stops resolving.
+- `definition` carries item content this dialect does not model and passes through unchecked. Tell the reader where it must come from; do not attempt to describe or invent its shape.
+
 ## Gotchas
 The mistakes that produce a wrong answer rather than an error, for THIS job. Always include:
 - **A truncated read looks exactly like a complete one** — HTTP 200, `meta.status: true`, a well-formed `data` array. There is no error to catch.
@@ -308,20 +318,27 @@ way, not that any particular bank does.
 - `jobs` + `get` is **not paged** — no `next` — yet `limit` maxes at 50. There is no
   documented way to retrieve more than 50 jobs. **Untested**; do not present it as if it were.
 
-### 7. Write safety — recipe content only
+### 7. Writes
 
-L0178 never writes. These are things the recipe must tell a developer, not things this
-dialect does.
+**Measured against a private consumer on sandbox Item bank 386, 2026-08-17.** Every hazard
+below is silent: the request returns `meta.status: true` and the damage appears later.
 
-- Name what an operation persists, and whether re-running it is idempotent.
-- `set` on an item bank creates or replaces content that other systems may already be
-  serving. Direct experiments at a scratch reference or a duplicate, never at the
-  reference the design names.
-- Batch sizes are capped (documented maximum 50 entries for `itembank/items` + `set`), so
-  a large write is many requests — which brings it under the per-endpoint rate limit.
+- **⚠ `set` REPLACES an Item; it does not merge [verified].** An Item was created with
+  `description` and `note`, then written again with only `reference`, `title` and
+  `definition`. The re-read showed `description: ""` and `note: null`. **Fields omitted from
+  the payload are cleared.** The read-modify-write a developer will reach for — fetch, change
+  one field, send that field back — destroys everything else, and nothing in the response
+  says so.
+- **⚠ The write response does not echo what was written [verified].** A successful `set`
+  returns `"data": []`. There is nothing to inspect, so confirmation requires a re-read.
+- **⚠ `status` defaults to `unpublished` [verified], and an unpublished Item cannot be used
+  in an assessment.** A write that omits `status` succeeds and produces an Item that
+  delivery silently ignores.
+- **`definition` is REQUIRED, and must contain at least one widget [verified].** Omitting it
+  gives `meta.code` **20000** "definition must have a non-null value"; an empty `widgets`
+  array gives **20001** "definition must contain 1 or more widgets". So an Item cannot be
+  written without content that already exists — this dialect moves content, L0176 composes
+  it, and the boundary is enforced by the API rather than only by policy.
+- `new_reference` renames the Item at `reference`. Documented; not exercised.
+- Batch maximum is 50 entries. Documented; **untested** — testing it means creating 51 Items.
 
-OUT_OF_SCOPE: authoring item **content** (→ L0176); embedding the Author API authoring
-experience (→ L0177); assessment delivery (Items API) and analytics (Reports API) —
-separate sibling dialects, neither built; calling the Learnosity API at all (this dialect
-is documentation-only and holds no credentials); emitting runnable host-language code (the
-recipe is language-neutral).

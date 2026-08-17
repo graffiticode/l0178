@@ -81,6 +81,13 @@ function validateProp(
     }
     return out;
   }
+  if (type === "unmodeled") {
+    // Documented by Learnosity, deliberately not modelled here. It passes through so a
+    // valid request can still be built, and says so — which is more useful than silence
+    // (the caller would not know it was unchecked) or a typo error (it is not a typo).
+    pushWarn(options, `${name}: passed through unchecked. It carries item CONTENT, which this dialect does not model — compose it where the content lives and hand it through. Nothing here validates its shape.`);
+    return value;
+  }
   if (type === "records") {
     // A list of records checked against a declared element schema. Each key is validated
     // by the same machinery as a top-level field, so nested types and enums come for
@@ -230,6 +237,18 @@ function finalize(rec: any, options: any): any {
     }
     if (block.primaryBankDefault && request["organisation-id"] === undefined) {
       specificity.push("No Item bank specified (`organisation-id`) — the consumer's primary Item bank is used.");
+    }
+    // Write safety. Every hazard here is silent — the request succeeds and the damage
+    // surfaces later — so these are advisories on a job that is otherwise correct.
+    if (block.writes) {
+      specificity.push(`This job WRITES. ${block.endpoint} + ${block.action} persists to the Item bank, and the response does not echo what was written — re-read to confirm. Point it at a scratch bank until you have seen it do the right thing.`);
+      const entries = Array.isArray(request.items) ? request.items : [];
+      if (entries.some((e: any) => e && e.status === undefined)) {
+        specificity.push("An Item written without `status` defaults to `unpublished`, and an unpublished Item cannot be used in an assessment. The write succeeds either way, so nothing tells you until delivery is empty — set `status` explicitly.");
+      }
+      if (entries.some((e: any) => e && e["new-reference"] !== undefined)) {
+        specificity.push("`new-reference` RENAMES the Item at `reference`. Anything referring to the old reference — activities, saved sessions, your own records — will no longer resolve.");
+      }
     }
     if (request.limit === undefined && block.paged) {
       specificity.push("No `limit` set — Learnosity's default page size applies, and the documented maximum is 50.");

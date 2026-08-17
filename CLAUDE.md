@@ -37,9 +37,9 @@ job* (which endpoint, which action, what the request carries); L0178 validates i
 holes as steering warnings, and — via `get_spec` — returns a host-language-neutral developer
 recipe covering signing, paging, the response envelope, and verification.
 
-**Status: early.** Four operations are modelled — `items-get`, `responses-get`, `jobs-get`
-and `offlinepackage-get`. Each was chosen to DISAGREE with what was already modelled, which
-is the only reason the traps below were found rather than assumed. The other 53 documented
+**Status: early.** Five operations are modelled — `items-get`, `items-set`,
+`responses-get`, `jobs-get` and `offlinepackage-get`. Each was chosen to DISAGREE with what was already modelled, which
+is the only reason the traps below were found rather than assumed. The other 52 documented
 blocks are in `spec/coverage.md` and are unbuilt, not unsupported; an operation absent from
 the vocabulary must never be guessed at.
 
@@ -83,6 +83,17 @@ saying what exercised it.
   The reference gives `Default: ["completed"]`; omitting `status` in fact returns every
   status. A developer who mirrors the documented default filters out the in-flight job and
   gets zero records — a wait that reads as "no such job". See C16.
+- **`set` REPLACES an Item; it does not merge.** A field omitted from the payload is
+  cleared — measured: an Item written back with only `reference`/`title`/`definition` lost
+  its `description` and `note`. The read-modify-write a developer reaches for destroys
+  every field not resent, `meta.status` is `true` throughout, and the response is `data: []`
+  so nothing can be compared. This is the worst hazard in the API so far. See C18.
+- **`status` defaults to `unpublished` on write**, and an unpublished Item cannot be
+  delivered. The write succeeds; delivery is just empty.
+- **`definition` is required and must hold ≥1 widget** (codes 20000 / 20001), so an Item
+  cannot be written without content composed elsewhere. The L0176 → L0178 boundary is
+  enforced by the API, not only by our policy — `definition` is carried as `unmodeled` and
+  passes through unchecked.
 - **The async envelope is not uniform.** `itembank/offlinepackage` returns `data` as an
   ARRAY (`data[0].job_reference`); the `sessions` article documents an object. Only the
   array side is measured — C17 is half-open.

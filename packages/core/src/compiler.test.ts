@@ -448,3 +448,73 @@ describe("the Item-bank advisory only fires where a default is documented", () =
     expect(jobs.warnings).toEqual([]);
   });
 });
+
+describe("items-set — the first write", () => {
+  const ITEM = `{reference: "L0178_TEST_1", definition: {widgets: []}, questions: [{reference: "w1"}], status: "published", title: "t"}`;
+  const SET = (item = ITEM) => `data-job items-set [ organisation-id 386 items [${item}] {} ] {}..`;
+
+  test("selects the write operation and takes no paging policy", async () => {
+    const out = await compile(SET());
+    expect(out.endpoint).toBe("itembank/items");
+    expect(out.action).toBe("set");
+    expect(out.paged).toBe(false);
+    expect(out.async).toBe(false);
+    expect(out.complete).toBe(true);
+    expect(hasWarning(out, "doesn't say how far it reads")).toBe(false);
+  });
+
+  test("it always warns that the job writes, and that the response does not echo", async () => {
+    // Verified on sandbox 386: a successful set returns `data: []`. You cannot confirm
+    // what landed from the response — you have to re-read.
+    const out = await compile(SET());
+    expect(hasWarning(out, "This job WRITES")).toBe(true);
+    expect(hasWarning(out, "does not echo what was written")).toBe(true);
+  });
+
+  test("an item written without status is flagged as undeliverable", async () => {
+    // Verified: status omitted -> "unpublished", and an unpublished Item cannot be used
+    // in an assessment. The write succeeds, so nothing surfaces until delivery is empty.
+    const out = await compile(SET(`{reference: "r", definition: {widgets: []}}`));
+    expect(hasWarning(out, "defaults to `unpublished`")).toBe(true);
+    // ...and is silent when status is given.
+    const ok = await compile(SET());
+    expect(hasWarning(ok, "defaults to `unpublished`")).toBe(false);
+  });
+
+  test("new-reference is flagged as a rename that breaks referrers", async () => {
+    const out = await compile(SET(`{reference: "old", new-reference: "new", definition: {widgets: []}, status: "published"}`));
+    expect(hasWarning(out, "RENAMES the Item")).toBe(true);
+  });
+
+  test("reference and definition are both required on an entry", async () => {
+    const noDef = await compile(SET(`{reference: "r", status: "published"}`));
+    expect(hasWarning(noDef, 'every entry needs "definition"')).toBe(true);
+    const noRef = await compile(SET(`{definition: {widgets: []}, status: "published"}`));
+    expect(hasWarning(noRef, 'every entry needs "reference"')).toBe(true);
+  });
+
+  test("content fields pass through as unmodeled, and say so", async () => {
+    // definition is REQUIRED by the API but carries item CONTENT, which is L0176's
+    // surface. Carrying it unmodeled beats omitting it (no valid write could be written)
+    // and beats a typo error (it is not a typo).
+    const out = await compile(SET());
+    expect(hasWarning(out, "passed through unchecked")).toBe(true);
+    expect(hasWarning(out, "this dialect does not model")).toBe(true);
+  });
+
+  test("a read-side field is not a write-side field", async () => {
+    // `references` is a real keyword — items-get defines it — so this is not a parse
+    // error. Keywords are dialect-wide and the FOLD scopes them, which is the whole
+    // reason validation happens where the block is known.
+    const out = await compile(`data-job items-set [ references ["a"] {} ] {}..`);
+    expect(hasWarning(out, "isn't a request field of this operation")).toBe(true);
+    expect(out.request.references).toBeUndefined();
+  });
+
+  test("the documented batch maximum is enforced", async () => {
+    const many = Array.from({ length: 51 },
+      (_, i) => `{reference: "r${i}", definition: {widgets: []}, status: "published"}`).join(" ");
+    const out = await compile(SET(many));
+    expect(hasWarning(out, "exceeds the documented maximum of 50")).toBe(true);
+  });
+});

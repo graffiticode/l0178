@@ -32,7 +32,8 @@ export const TOK = (kw: string) => kw.toUpperCase().replace(/-/g, "_");
 //   {type, name?}) | timestamp (a UTC Unix integer OR an ISO 8601 string — Learnosity
 //   accepts either, so neither alone is a type error) | records (a list of records
 //   validated against a declared element schema, so nested keys and types are checked by
-//   the same machinery as a top-level field)
+//   the same machinery as a top-level field) | unmodeled (documented by Learnosity but
+//   deliberately not modelled here — it reports itself as such rather than as a typo)
 export type Constraint = {
   values?: string[];      // accepted values, for string / strings
   max?: number;           // maximum numeric value
@@ -73,6 +74,9 @@ export type Block = {
   // default is documented, so omitting it means unfiltered rather than primary — and an
   // advisory saying "the primary bank is used" would be plainly false there.
   primaryBankDefault?: boolean;
+  // True when the operation PERSISTS. Drives the write-safety warnings, and is not the
+  // same as `action !== "get"` — some `get` operations start jobs that mutate.
+  writes?: boolean;
   article: string;       // Zendesk article id — provenance for every field below
   fields: Fields;
 };
@@ -229,6 +233,65 @@ export const BLOCKS: Record<string, Block> = {
         },
       }],
       "base-directory": ["base_directory", "string"],
+    },
+  },
+
+  // The first WRITE. Verified against sandbox 386 on 2026-08-17, and every one of its
+  // hazards is silent: the request succeeds and the damage shows up later.
+  //   - `set` REPLACES an Item. Fields omitted from the payload are cleared, not kept.
+  //   - `status` defaults to `unpublished`, and an unpublished Item cannot be delivered.
+  //   - the response `data` is an empty array — it does not echo what was written.
+  //   - `definition` is REQUIRED and must hold at least one widget, so a complete write
+  //     is impossible without content composed elsewhere (L0176).
+  "items-set": {
+    endpoint: "itembank/items",
+    action: "set",
+    paged: false,
+    async: false,
+    writes: true,
+    primaryBankDefault: true,
+    article: "26076386828189",
+    fields: {
+      "organisation-id": ["organisation_id", "number"],
+      "items": ["items", "records", {
+        maxEntries: 50,
+        required: ["reference", "definition"],
+        schema: {
+          "reference": ["reference", "string"],
+          // Renames an existing Item when sent alongside `reference`.
+          "new-reference": ["new_reference", "string"],
+          "title": ["title", "string"],
+          "description": ["description", "string"],
+          "source": ["source", "string"],
+          "note": ["note", "string"],
+          // Defaults to "unpublished". An Item must be "published" to be used in an
+          // assessment, so omitting this writes an Item nothing can deliver.
+          "status": ["status", "string", {
+            values: ["published", "unpublished", "archived"],
+          }],
+          "tags": ["tags", "tags"],
+          "features": ["features", "strings"],
+          "questions": ["questions", "records", {
+            required: ["reference"],
+            schema: { "reference": ["reference", "string"] },
+          }],
+          "metadata-acknowledgements": ["metadata.acknowledgements", "string"],
+          "metadata-scoring-type": ["metadata.scoring_type", "string", {
+            values: ["per-question", "per-dichotomous", "dependent"],
+          }],
+          "adaptive-difficulty": ["adaptive.difficulty", "number"],
+          "authoring-workflow-reference": ["authoring_workflow.reference", "string"],
+          "authoring-workflow-state": ["authoring_workflow.state", "string"],
+          // CONTENT, and therefore L0176's surface — this dialect moves items, it does
+          // not compose them. `definition` is nevertheless REQUIRED by the API, so it is
+          // carried as unmodeled rather than omitted: a caller must pass a definition
+          // through from wherever the content was authored, and saying "not modelled"
+          // is more useful than either silence or a typo error.
+          "definition": ["definition", "unmodeled"],
+          "dynamic-content-data": ["dynamic_content_data", "unmodeled"],
+          "workflow": ["workflow", "unmodeled"],
+        },
+      }],
     },
   },
 };
