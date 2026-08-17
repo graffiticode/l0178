@@ -47,7 +47,7 @@ Three details are binary and must be stated exactly:
 **A required section whenever the compiled output has `async: true`. Never fold it into the Procedure, and never emit a Paging section for the same job — an operation returns a page or a job reference, never both.**
 
 - Read `poll_with` from the compiled output for the channel; do not hard-code the knowledge that `jobs` is where async work is redeemed.
-- **Say where the reference actually is.** The response is `data[0].job_reference`, not `data.job_reference` — the latter yields `undefined` and is the natural thing to write.
+- **Say where the reference actually is, and take it from `poll_with.job_reference_at` — never generalise.** The envelope shape differs per endpoint and both forms are real: some return `data[0].job_reference`, others `data.job_reference`. Reading the wrong one yields `undefined` and a poll that never finds its job. If the recipe shows a defensive extraction, show it as a defence against the OTHER endpoints, not as uncertainty about this one.
 - **Tell the reader to OMIT `status` when polling, and say why**, because the reference documents `Default: ["completed"]` and a careful developer will mirror it. Doing so filters out the in-flight job and returns zero records, which reads as "no such job" rather than "not finished yet". This is a case where following the documentation is the bug.
 - Terminate on a **terminal status** — `completed` or `halted` — not on records appearing, and not on a fixed number of attempts.
 - Give the loop a backstop and name it: a poll that never sees a terminal status must fail loudly rather than spin, and the per-endpoint rate limit applies to the polling endpoint too.
@@ -285,9 +285,9 @@ Observed shape **[verified]** — note `versions`, which the reference does not 
 ### 6. Async operations
 
 - **13 of the 57 documented operations do not return a result.** They return a job
-  reference and complete asynchronously. **The envelope shape is not uniform** — see the
-  measured note below; `itembank/offlinepackage` returns `data` as an ARRAY, while the
-  `sessions` article documents an object. Do not state one shape as general.
+  reference and complete asynchronously. **The envelope shape is not uniform, and that is
+  real rather than a documentation slip** — see the measured note below. Never state one
+  shape as general.
 - Poll with the **`jobs`** endpoint and action `get`, using the returned `job_reference`.
 - Async is a property of the individual operation, **not of a path prefix** — the 13 are
   spread across `itembank/*`, `sessions/*`, `reports/*` and `jobs/*`. Two of them are
@@ -302,11 +302,16 @@ Observed shape **[verified]** — note `versions`, which the reference does not 
 consumer from the demo-bank facts above, which matters: these say the mechanism behaves this
 way, not that any particular bank does.
 
-- **⚠ The async envelope's `data` is an ARRAY [verified].** `itembank/offlinepackage` returns
-  `{"data": [{"job_reference": "…"}]}`. A caller writing `data.job_reference` gets
-  `undefined`; the reference is at `data[0].job_reference`. Learnosity's `sessions` article
-  documents the OBJECT form for that endpoint. Only the array form is verified — do not
-  assume one shape across endpoints, and tell the reader to check rather than generalise.
+- **⚠ The async envelope's shape DIFFERS PER ENDPOINT, and both forms are real [verified,
+  both sides].** `itembank/offlinepackage` returns `{"data": [{"job_reference": …}]}` — the
+  reference is at `data[0].job_reference` and `data.job_reference` is `undefined`.
+  `itembank/activities/duplicate` returns `{"data": {"job_reference": …}}` — the reference is
+  at `data.job_reference`. Each matches its own reference page, so this is not a documentation
+  error and the docs are trustworthy here *per endpoint*. Across the 13 async blocks the
+  reference splits four array / eight object. **No single extraction works everywhere**: a
+  caller who writes one after reading one endpoint's docs gets an undefined reference on the
+  next, with no error — just a poll that never finds its job. The compiled output carries
+  `poll_with.job_reference_at` for the block in hand.
 - **⚠ Do NOT pass `status: ["completed"]` when polling [verified] — following the
   documentation is what breaks the loop.** The reference gives `Default: ["completed"]` for
   `jobs` + `get`. It does not behave that way: omitting `status` returns jobs of EVERY status,

@@ -74,6 +74,13 @@ export type Block = {
   // default is documented, so omitting it means unfiltered rather than primary — and an
   // advisory saying "the primary bank is used" would be plainly false there.
   primaryBankDefault?: boolean;
+  // Where the job reference sits in an async response. VERIFIED to differ per endpoint,
+  // and NOT a documentation error: itembank/offlinepackage returns
+  // `data: [{job_reference}]` and itembank/activities/duplicate returns
+  // `data: {job_reference}`, each matching its own reference page. So one extraction does
+  // not work everywhere — `data.job_reference` is undefined on the array endpoints — and
+  // the shape has to travel with the block, like pagingEnd does.
+  asyncEnvelope?: "array" | "object";
   // True when the operation PERSISTS. Drives the write-safety warnings, and is not the
   // same as `action !== "get"` — some `get` operations start jobs that mutate.
   writes?: boolean;
@@ -216,6 +223,7 @@ export const BLOCKS: Record<string, Block> = {
     action: "get",
     paged: false,
     async: true,
+    asyncEnvelope: "array",
     primaryBankDefault: true,
     article: "26076363707421",
     fields: {

@@ -42,7 +42,7 @@ reader can overturn it with better evidence instead of re-litigating it from scr
 | C14 | The "short page" hazard | RESOLVED — re-grounded |
 | C15 | When `meta.next` is returned | RESOLVED — measured, docs half-right |
 | C16 | `jobs` + `get` `status` default | RESOLVED — measured, docs WRONG |
-| C17 | Shape of the async `data` envelope | PARTLY OPEN — one side measured |
+| C17 | Shape of the async `data` envelope | RESOLVED — measured; genuinely differs |
 | C18 | Whether `set` merges or replaces | RESOLVED — measured; docs silent |
 
 ---
@@ -291,25 +291,33 @@ clearest case yet for measuring a documented default rather than restating it.
 **Depends on it:** the Polling section of `spec-directive.md`, which tells the recipe to OMIT
 `status` and says why a careful developer will get this wrong.
 
-### C17 — Shape of the async `data` envelope · PARTLY OPEN
+### C17 — Shape of the async `data` envelope · RESOLVED (measured both sides)
 
-Two endpoints document the async response differently. `itembank/offlinepackage` shows
-`"data": [ { "job_reference": … } ]` — an **array**. `sessions` + `set` (both variants) shows
-`"data": { "job_reference": … }` — an **object**.
+Endpoints document the async response differently. Across the 13 async blocks the reference is
+split: four show `"data": [ { "job_reference": … } ]` (an **array**) and eight show
+`"data": { "job_reference": … }` (an **object**). The obvious hypothesis was that one form was a
+documentation error.
 
-**Measured, one side only.** `itembank/offlinepackage` really does return an array:
-`data[0].job_reference` holds the reference and `data.job_reference` is `undefined`.
+**It is not. Both are real.** Measured on sandbox 386:
 
-**Still open:** whether `sessions` + `set` truly returns the object form. Confirming it requires
-POSTing session data, which is a write — barred on the public demo account by policy, and not yet
-worth doing on the sandbox. So the inconsistency is documented on one side and verified on the
-other, which is not the same as confirmed.
+| Endpoint | Documents | Returns |
+| :-- | :-- | :-- |
+| `itembank/offlinepackage` + `get` | array | **array** — `data[0].job_reference` |
+| `itembank/activities/duplicate` + `set` | object | **object** — `data.job_reference` |
 
-**What the prompts do meanwhile:** the Polling rule states the array form as measured for this
-endpoint and tells the recipe not to generalise a single envelope shape across endpoints.
+Each matched its own reference page. So the envelope shape genuinely differs per endpoint, and —
+usefully — **the documented shape has been reliable on both endpoints tested**, which makes the
+reference trustworthy here so long as it is read per endpoint rather than generalised.
 
-**To close it:** fire one `sessions` + `set` at sandbox 386 with a throwaway payload and read the
-envelope.
+**Consequence.** No single extraction works everywhere. `data.job_reference` is `undefined` on the
+array endpoints, and `data[0]` is `undefined` on the object ones. A caller who writes one
+extraction after reading one endpoint's docs has code that breaks on the next async endpoint they
+touch, with no error — just an undefined reference and a poll that never finds its job.
+
+**Depends on it:** `Block.asyncEnvelope` in `vocab.ts` and `poll_with.job_reference_at` in the
+compiled output, so the recipe is told where the reference is for THIS endpoint rather than
+inferring it. This is the same treatment `pagingEnd` gets, and for the same reason: a per-endpoint
+fact that reads like a general one is how a wrong general rule gets written.
 
 ### C18 — Whether `set` merges or replaces · RESOLVED (measured; the reference never says)
 
@@ -341,7 +349,7 @@ what bites.
 
 Measurements come from two consumers, and each entry says which. C1–C15 were taken against
 **Learnosity's public demo Item bank** on 2026-08-13; C16–C18 against a **private consumer on
-sandbox Item bank 386** on 2026-08-17. Both used `learnosity-sdk-nodejs` 0.7.0 against
+sandbox Item bank 386** on 2026-08-17 (C17 closed there the same day). Both used `learnosity-sdk-nodejs` 0.7.0 against
 `v2025.2.LTS` (concrete `v1.79.5`).
 
 Writes are never sent to the public demo account — it is shared, and writes persist. That policy

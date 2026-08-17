@@ -183,9 +183,13 @@ assuming, because async operations are spread across four path families.
 So an async request usually implies TWO programs: the producer, and a `jobs-get` to redeem
 it. `paging` is not required on either — neither block is paged.
 
-The API facts that make the polling loop correct (where the reference is in the envelope,
-and why passing the documented `status` default breaks the poll) are in the canonical
-knowledge, not here.
+Where the job reference sits in the response **differs per endpoint** — some return
+`data[0].job_reference`, others `data.job_reference`, and both are real rather than a
+documentation slip. The output carries `poll_with.job_reference_at` for the block in hand;
+never generalise one endpoint's shape to another.
+
+The remaining API facts that make the polling loop correct — including why passing the
+documented `status` default breaks the poll — are in the canonical knowledge, not here.
 
 ## Warnings are repair signals
 

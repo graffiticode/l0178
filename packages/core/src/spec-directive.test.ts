@@ -134,10 +134,13 @@ describe("the directive gives async its own section", () => {
     expect(has(directive, "Read poll_with from the compiled output")).toBe(true);
   });
 
-  test("it says where the job reference actually is", () => {
-    // data[0].job_reference. Writing data.job_reference yields undefined, and is the
-    // natural thing to write.
-    expect(has(directive, "data[0].job_reference, not data.job_reference")).toBe(true);
+  test("it takes the reference location from poll_with, never generalising", () => {
+    // Both envelope shapes are REAL — offlinepackage returns an array, activities/duplicate
+    // an object, each matching its own docs. A recipe that states one shape as general
+    // breaks on the next async endpoint with no error, just an undefined reference.
+    expect(has(directive, "take it from poll_with.job_reference_at")).toBe(true);
+    expect(has(directive, "never generalise")).toBe(true);
+    expect(has(directive, "both forms are real")).toBe(true);
     expect(has(instructions, "poll_with")).toBe(true);
   });
 

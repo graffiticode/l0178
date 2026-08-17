@@ -272,7 +272,17 @@ function finalize(rec: any, options: any): any {
     // paging_end: the recipe should branch on data it is given rather than hard-code the
     // knowledge that `jobs` is the channel. Async operations are spread across four path
     // families, so the channel is not inferable from the endpoint.
-    poll_with: block?.async ? { endpoint: "jobs", action: "get" } : undefined,
+    poll_with: block?.async
+      ? {
+        endpoint: "jobs",
+        action: "get",
+        // Where to read the reference from THIS endpoint's response. Verified to differ
+        // per endpoint, so the recipe must be told rather than left to generalise.
+        job_reference_at: block.asyncEnvelope === "object"
+          ? "data.job_reference"
+          : "data[0].job_reference",
+      }
+      : undefined,
     paging: top.paging,
     request,
     // Every request field this job sets, mapped to its exact Learnosity path, so the

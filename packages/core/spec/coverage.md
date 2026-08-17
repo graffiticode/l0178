@@ -29,8 +29,9 @@ documentation — this map tells you where to go looking, never what you will fi
 
 Each was chosen to DISAGREE with what was already modelled, and each disagreement paid: the two
 paged blocks end their loops by opposite rules (C15); the documented `status` default on `jobs`
-turned out not to exist, so following the reference breaks a polling loop (C16); and `set`
-replaces rather than merges, which the reference never states (C18).
+turned out not to exist, so following the reference breaks a polling loop (C16); `set`
+replaces rather than merges, which the reference never states (C18); and the async envelope
+genuinely differs per endpoint rather than one form being a doc error (C17).
 
 **Writes are never sent to the public demo account** — it is shared and writes persist. The
 private consumer covers what the demo cannot, and writes land in sandbox bank 386.

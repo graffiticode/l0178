@@ -381,7 +381,13 @@ describe("the async shape — jobs-get and its producers", () => {
     expect(out.paged).toBe(false);
     // The recipe must branch on data it is given: async operations are spread across four
     // path families, so the channel is not inferable from the endpoint.
-    expect(out.poll_with).toEqual({ endpoint: "jobs", action: "get" });
+    expect(out.poll_with).toEqual({
+      endpoint: "jobs", action: "get",
+      // Verified to differ per endpoint: offlinepackage returns an array, while
+      // activities/duplicate really returns an object. One extraction does not work
+      // everywhere, so where to read the reference travels with the block.
+      job_reference_at: "data[0].job_reference",
+    });
   });
 
   test("a synchronous block carries no poll_with", async () => {

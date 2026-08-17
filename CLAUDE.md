@@ -94,9 +94,12 @@ saying what exercised it.
   cannot be written without content composed elsewhere. The L0176 → L0178 boundary is
   enforced by the API, not only by our policy — `definition` is carried as `unmodeled` and
   passes through unchecked.
-- **The async envelope is not uniform.** `itembank/offlinepackage` returns `data` as an
-  ARRAY (`data[0].job_reference`); the `sessions` article documents an object. Only the
-  array side is measured — C17 is half-open.
+- **The async envelope is not uniform, and both shapes are REAL.** `itembank/offlinepackage`
+  returns `data` as an ARRAY (`data[0].job_reference`); `itembank/activities/duplicate`
+  returns an OBJECT (`data.job_reference`). Each matches its own reference page, so the docs
+  are trustworthy here per endpoint — but no single extraction works everywhere, and reading
+  the wrong one gives `undefined` and a poll that never finds its job. Carried per block as
+  `asyncEnvelope` / `poll_with.job_reference_at`. C17, closed.
 
 **What L0178 is not:** it does not author item content (that is L0176), does not cover the
 Author API authoring experience (that is L0177), and — importantly — **never calls a
