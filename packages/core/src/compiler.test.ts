@@ -360,3 +360,91 @@ describe("naming a container is not filtering it", () => {
     expect(hasWarning(out, "reads everything")).toBe(false);
   });
 });
+
+describe("the async shape — jobs-get and its producers", () => {
+  test("jobs-get is a standalone block: not paged, not async, no paging hole", async () => {
+    // Polling a reference you already hold is a legitimate job on its own. It is also the
+    // only modelled block that is not paged, so `paging` must NOT be required here.
+    const out = await compile(`data-job jobs-get [ references ["dc39cf55-dbfc-4921"] {} ] {}..`);
+    expect(out.endpoint).toBe("jobs");
+    expect(out.paged).toBe(false);
+    expect(out.paging_end).toBeUndefined();
+    expect(out.async).toBe(false);
+    expect(out.complete).toBe(true);
+    expect(hasWarning(out, "paged and the design doesn't say how far it reads")).toBe(false);
+  });
+
+  test("an async producer carries poll_with, naming the channel", async () => {
+    const out = await compile(`data-job offlinepackage-get [
+      organisation-id 386 items [{id: "calc-limit-2", reference: "calc-limit-2"}] {} ] {}..`);
+    expect(out.async).toBe(true);
+    expect(out.paged).toBe(false);
+    // The recipe must branch on data it is given: async operations are spread across four
+    // path families, so the channel is not inferable from the endpoint.
+    expect(out.poll_with).toEqual({ endpoint: "jobs", action: "get" });
+  });
+
+  test("a synchronous block carries no poll_with", async () => {
+    const out = await compile(`data-job paging EXHAUSTIVE items-get [ references ["a"] {} ] {}..`);
+    expect(out.poll_with).toBeUndefined();
+  });
+
+  test("jobs-get accepts the four job statuses and rejects an item status", async () => {
+    const ok = await compile(`data-job jobs-get [ status ["queued" "running" "halted" "completed"] {} ] {}..`);
+    expect(hasWarning(ok, "isn't one of")).toBe(false);
+    const bad = await compile(`data-job jobs-get [ status ["published"] {} ] {}..`);
+    expect(hasWarning(bad, "isn't one of")).toBe(true);
+  });
+});
+
+describe("records fields — the items list of an offline package", () => {
+  test("a well-formed record list passes and records its path", async () => {
+    const out = await compile(`data-job offlinepackage-get [
+      organisation-id 386
+      items [{id: "a", reference: "a"} {reference: "b"}]
+      {} ] {}..`);
+    expect(out.request.items).toEqual([{ id: "a", reference: "a" }, { reference: "b" }]);
+    expect(out.paths["items"]).toBe("items");
+    expect(hasWarning(out, "isn't part of this record")).toBe(false);
+  });
+
+  test("a key the element schema doesn't define is dropped with a warning", async () => {
+    const out = await compile(`data-job offlinepackage-get [
+      items [{reference: "a", wibble: "x"}] {} ] {}..`);
+    expect(hasWarning(out, '"wibble" isn\'t part of this record')).toBe(true);
+    expect(out.request.items[0].wibble).toBeUndefined();
+  });
+
+  test("a required key of the element is enforced", async () => {
+    const out = await compile(`data-job offlinepackage-get [ items [{id: "a"}] {} ] {}..`);
+    expect(hasWarning(out, 'every entry needs "reference"')).toBe(true);
+  });
+
+  test("nested element types are checked by the same machinery", async () => {
+    const out = await compile(`data-job offlinepackage-get [
+      items [{reference: "a", organisation-id: "386"}] {} ] {}..`);
+    expect(hasWarning(out, "must be a number")).toBe(true);
+  });
+
+  test("the deprecated item_references field is not modelled", async () => {
+    // Learnosity documents it alongside `items` and marks it deprecated; carrying it would
+    // teach a reader to reach for it. An unknown property is a parse error.
+    await expect(compile(`data-job offlinepackage-get [ item-references ["a"] {} ] {}..`))
+      .rejects.toBeTruthy();
+  });
+});
+
+describe("the Item-bank advisory only fires where a default is documented", () => {
+  test("items-get and offlinepackage-get advise; jobs-get does not", async () => {
+    // itembank/* documents `organisation_id` as defaulting to the consumer's PRIMARY bank.
+    // `jobs` does not — there the field filters jobs to a bank, so omitting it means
+    // unfiltered, and "the primary Item bank is used" would be a false statement.
+    const items = await compile(`data-job paging EXHAUSTIVE items-get [ status ["published"] limit 50 {} ] {}..`);
+    const pkg = await compile(`data-job offlinepackage-get [ items [{reference: "a"}] {} ] {}..`);
+    const jobs = await compile(`data-job jobs-get [ references ["x"] {} ] {}..`);
+    expect(hasWarning(items, "primary Item bank")).toBe(true);
+    expect(hasWarning(pkg, "primary Item bank")).toBe(true);
+    expect(hasWarning(jobs, "primary Item bank")).toBe(false);
+    expect(jobs.warnings).toEqual([]);
+  });
+});

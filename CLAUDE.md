@@ -37,11 +37,22 @@ job* (which endpoint, which action, what the request carries); L0178 validates i
 holes as steering warnings, and — via `get_spec` — returns a host-language-neutral developer
 recipe covering signing, paging, the response envelope, and verification.
 
-**Status: early.** Two operations are modelled — `itembank/items` + `get` (`items-get`) and
-`sessions/responses` + `get` (`responses-get`). They are deliberately one from each endpoint
-family, because the families disagree about how a paged read ends. The other 55 documented
+**Status: early.** Four operations are modelled — `items-get`, `responses-get`, `jobs-get`
+and `offlinepackage-get`. Each was chosen to DISAGREE with what was already modelled, which
+is the only reason the traps below were found rather than assumed. The other 53 documented
 blocks are in `spec/coverage.md` and are unbuilt, not unsupported; an operation absent from
 the vocabulary must never be guessed at.
+
+### Credentials policy
+
+- **Never write to the public Learnosity demo account.** It is shared and writes persist.
+  Reads against it are fine and are the provenance for the paging facts below.
+- The private consumer is in the env as `LEARNOSITY_KEY` / `LEARNOSITY_SECRET`. Never print
+  the secret, never commit either, never bake them into a spec asset or fixture.
+- **Writes go to sandbox Item bank 386**, never the default bank, which holds real content.
+  Firing an async job counts as a write for this purpose even when its action is `get`.
+- Record WHICH consumer measured a fact. A fact verified on one bank is a claim about the
+  mechanism, not about the other.
 
 **Paging and transport are [verified]** against Learnosity's public demo Item bank
 (2026-08-13, `learnosity-sdk-nodejs` 0.7.0, `v2025.2.LTS`). Everything else is read off the
@@ -68,6 +79,13 @@ saying what exercised it.
   so unconditional `.json()` throws a parse error and misdirects the debugging.
 - **41003's message is misleading here** — it advises checking the browser's
   `location.hostname`, and there is no browser in a server-to-server call.
+- **The documented `status` default on `jobs` is not real, and following it breaks polling.**
+  The reference gives `Default: ["completed"]`; omitting `status` in fact returns every
+  status. A developer who mirrors the documented default filters out the in-flight job and
+  gets zero records — a wait that reads as "no such job". See C16.
+- **The async envelope is not uniform.** `itembank/offlinepackage` returns `data` as an
+  ARRAY (`data[0].job_reference`); the `sessions` article documents an object. Only the
+  array side is measured — C17 is half-open.
 
 **What L0178 is not:** it does not author item content (that is L0176), does not cover the
 Author API authoring experience (that is L0177), and — importantly — **never calls a

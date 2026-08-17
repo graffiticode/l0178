@@ -47,6 +47,11 @@ data-job
 - **A block is one `(endpoint, action)` pair.** `items-get` is `itembank/items` + `get`.
   One keyword per pair, because a field's legality depends on the pair rather than on the
   endpoint alone — and because bare `get` and `set` belong to the base language.
+  Four are modelled: `items-get`, `responses-get`, `jobs-get` and `offlinepackage-get`.
+- **`offlinepackage-get` is asynchronous** — it returns a job reference rather than a
+  result, and is redeemed by polling `jobs-get`. Neither of those two is paged, so neither
+  takes a paging policy. Note it is an async `get`: the action verb says nothing about what
+  an operation does.
 - **`paging`** takes `EXHAUSTIVE` (follow `meta.next` to the end) or `SINGLE-PAGE`
   (deliberately take one page). It is design intent, never sent in a request. On a paged
   block its absence is a hole.

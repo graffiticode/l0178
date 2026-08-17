@@ -41,6 +41,8 @@ reader can overturn it with better evidence instead of re-litigating it from scr
 | C13 | Request body encoding | RESOLVED — assumption was wrong |
 | C14 | The "short page" hazard | RESOLVED — re-grounded |
 | C15 | When `meta.next` is returned | RESOLVED — measured, docs half-right |
+| C16 | `jobs` + `get` `status` default | RESOLVED — measured, docs WRONG |
+| C17 | Shape of the async `data` envelope | PARTLY OPEN — one side measured |
 
 ---
 
@@ -264,12 +266,61 @@ on `sessions/*` and a data-loss bug on `itembank/*` (see C6). Neither can be sta
 per-endpoint branch in `spec-directive.md`'s Paging section. This is why the second block modelled
 was deliberately drawn from a different endpoint family.
 
+### C16 — `jobs` + `get` `status` default · RESOLVED (measured; the reference is wrong)
+
+The reference documents `status` on `jobs` + `get` as `Default: ["completed"]`. Taken at face
+value that makes polling hostile: a freshly submitted job is `queued`, so a poll that omits
+`status` would return nothing until the job finished.
+
+**Resolution — the documented default does not exist.** Measured against a private consumer on
+sandbox 386: a list request with no `status` returned jobs with statuses `["queued","completed"]`,
+identical to the same request passing all four values explicitly.
+
+**And the error inverts.** Because the default is not applied, omitting `status` polls correctly.
+It is the developer who FOLLOWS the reference — writing `status: ["completed"]` because that is
+documented as the default — who gets **zero records for an in-flight job**, indistinguishable
+from "no such job". Measured directly: same job, same instant, `status` omitted returned 1 record
+(`queued`), `status: ["completed"]` returned 0.
+
+**Why it mattered.** This was written into the plan as a predicted trap in the opposite direction
+— that omitting `status` would silently filter. Building the block the wrong way round would have
+produced a recipe that instructs the reader to do the one thing that breaks the loop. It is the
+clearest case yet for measuring a documented default rather than restating it.
+
+**Depends on it:** the Polling section of `spec-directive.md`, which tells the recipe to OMIT
+`status` and says why a careful developer will get this wrong.
+
+### C17 — Shape of the async `data` envelope · PARTLY OPEN
+
+Two endpoints document the async response differently. `itembank/offlinepackage` shows
+`"data": [ { "job_reference": … } ]` — an **array**. `sessions` + `set` (both variants) shows
+`"data": { "job_reference": … }` — an **object**.
+
+**Measured, one side only.** `itembank/offlinepackage` really does return an array:
+`data[0].job_reference` holds the reference and `data.job_reference` is `undefined`.
+
+**Still open:** whether `sessions` + `set` truly returns the object form. Confirming it requires
+POSTing session data, which is a write — barred on the public demo account by policy, and not yet
+worth doing on the sandbox. So the inconsistency is documented on one side and verified on the
+other, which is not the same as confirmed.
+
+**What the prompts do meanwhile:** the Polling rule states the array form as measured for this
+endpoint and tells the recipe not to generalise a single envelope shape across endpoints.
+
+**To close it:** fire one `sessions` + `set` at sandbox 386 with a throwaway payload and read the
+envelope.
+
 ---
 
 ## Caveat on "measured"
 
-Every measurement here was taken against **Learnosity's public demo Item bank** on 2026-08-13,
-using `learnosity-sdk-nodejs` 0.7.0 against `v2025.2.LTS` (concrete `v1.79.5`). A measured fact
+Measurements come from two consumers, and each entry says which. C1–C15 were taken against
+**Learnosity's public demo Item bank** on 2026-08-13; C16–C17 against a **private consumer on
+sandbox Item bank 386** on 2026-08-17. Both used `learnosity-sdk-nodejs` 0.7.0 against
+`v2025.2.LTS` (concrete `v1.79.5`).
+
+Writes are never sent to the public demo account — it is shared, and writes persist. That policy
+is why C17 stays half-open rather than being closed with a quick POST. A measured fact
 says the mechanism behaves that way on that bank at that version. It does not say the reader's
 consumer, bank or pinned version does, and no resolution above should be quoted to a caller as a
 guarantee about their own deployment.

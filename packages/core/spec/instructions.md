@@ -50,14 +50,21 @@ One keyword per `(endpoint, action)` pair, because a field's legality depends on
 rather than on the endpoint alone — and because bare `get` and `set` belong to the base
 language.
 
-| Block | Endpoint | Action | Paged | Loop ends on |
-| :---- | :------- | :----- | :---: | :--- |
-| `items-get` | `itembank/items` | `get` | yes | `meta.next` **absent** |
-| `responses-get` | `sessions/responses` | `get` | yes | an **empty page** |
+| Block | Endpoint | Action | Paged | Loop ends on | Async |
+| :---- | :------- | :----- | :---: | :--- | :---: |
+| `items-get` | `itembank/items` | `get` | yes | `meta.next` **absent** | no |
+| `responses-get` | `sessions/responses` | `get` | yes | an **empty page** | no |
+| `jobs-get` | `jobs` | `get` | no | — | no |
+| `offlinepackage-get` | `itembank/offlinepackage` | `get` | no | — | **yes** |
 
-Only these two of the Data API's 57 operations are modelled. A request for any other —
-writes, duplicates, the async job family, `sessions/scores` — must be declined, not
-answered with the nearest built thing.
+Only these four of the Data API's 57 operations are modelled. A request for any other —
+writes, duplicates, `sessions/scores` — must be declined, not answered with the nearest
+built thing.
+
+`offlinepackage-get` is an **async `get`**: proof that the action verb says nothing about
+what an operation does. It returns a job reference rather than a result. `jobs-get` is the
+channel every async operation in the API is redeemed at, and is also a legitimate job on its
+own — polling a reference the caller already holds.
 
 ## `paging` is a required declaration
 
@@ -119,6 +126,43 @@ the recipe:
 `status` here is a SESSION status, disjoint from the Item statuses `items-get` accepts.
 The same keyword means different things in different blocks, which is why fields are
 scoped to their block: a field the block does not define is a parse error.
+
+## Request fields of `jobs-get`
+
+| Field | Learnosity path | Type |
+| :---- | :-------------- | :--- |
+| `references` | `references` | list of job references (max 1000) |
+| `status` | `status` | `"queued"` `"running"` `"halted"` `"completed"` |
+| `include` | `include` | list of strings — restricts the properties returned |
+| `organisation-id` | `organisation_id` | number |
+| `mintime` / `maxtime` | `mintime` / `maxtime` | job CREATED time |
+| `limit` | `limit` | number (max 50) |
+
+## Request fields of `offlinepackage-get`
+
+| Field | Learnosity path | Type |
+| :---- | :-------------- | :--- |
+| `organisation-id` | `organisation_id` | number |
+| `activity-references` | `activity_references` | list of strings (max 1000) |
+| `items` | `items` | list of records `{id, reference, organisation-id?}`; `reference` required |
+| `base-directory` | `base_directory` | string — default `/vendor/itembank` |
+
+Learnosity also documents `item_references` on this endpoint. It is **deprecated** in favour
+of `items` and is deliberately not modelled; do not reach for it.
+
+## Polling an async operation
+
+When the compiled output has `async: true` there is no result and no paging loop: the
+response carries a job reference, and the caller polls `jobs-get` until the job reaches a
+terminal status. The output names the channel in `poll_with` — read it rather than
+assuming, because async operations are spread across four path families.
+
+So an async request usually implies TWO programs: the producer, and a `jobs-get` to redeem
+it. `paging` is not required on either — neither block is paged.
+
+The API facts that make the polling loop correct (where the reference is in the envelope,
+and why passing the documented `status` default breaks the poll) are in the canonical
+knowledge, not here.
 
 ## Warnings are repair signals
 

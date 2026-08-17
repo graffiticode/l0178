@@ -81,6 +81,39 @@ function validateProp(
     }
     return out;
   }
+  if (type === "records") {
+    // A list of records checked against a declared element schema. Each key is validated
+    // by the same machinery as a top-level field, so nested types and enums come for
+    // free. Ported from L0177, which needed it for item banks; here it is `items`, the
+    // ItemObjects an offline package is built from.
+    const schema = (c?.schema || {}) as Fields;
+    const required = c?.required || [];
+    const list = Array.isArray(value) ? value : value == null ? [] : [value];
+    const out: any[] = [];
+    for (const rec of list) {
+      if (!rec || typeof rec !== "object" || Array.isArray(rec)) {
+        pushWarn(options, `${name}: each entry must be a record, e.g. {${Object.keys(schema)[0]}: …}.`);
+        continue;
+      }
+      const clean: any = {};
+      for (const [k, v] of Object.entries(rec)) {
+        const f = schema[k];
+        if (!f) {
+          pushWarn(options, `${name}: "${k}" isn't part of this record. Accepts: ${Object.keys(schema).join(", ")}.`);
+          continue;
+        }
+        clean[k] = validateProp(k, f[1], v, options, f[2] as Constraint | undefined);
+      }
+      for (const r of required) {
+        if (clean[r] === undefined) pushWarn(options, `${name}: every entry needs "${r}".`);
+      }
+      out.push(clean);
+    }
+    if (c?.maxEntries && out.length > c.maxEntries) {
+      pushWarn(options, `${name}: ${out.length} entries exceeds the documented maximum of ${c.maxEntries}.`);
+    }
+    return out;
+  }
   if (type === "strings") {
     const list = Array.isArray(value) ? value : value == null ? [] : [value];
     if (!list.every((s) => typeof s === "string")) pushWarn(options, `${name} must be a list of strings.`);
@@ -195,7 +228,7 @@ function finalize(rec: any, options: any): any {
     if (block.paged && !filters.some((f) => request[f] !== undefined)) {
       specificity.push(`No filter is set, so this reads everything ${block.endpoint} returns. Narrow it with ${filters.slice(0, 4).join(", ")} or a mintime/maxtime window unless a full extract is what you want.`);
     }
-    if ("organisation-id" in block.fields && request["organisation-id"] === undefined) {
+    if (block.primaryBankDefault && request["organisation-id"] === undefined) {
       specificity.push("No Item bank specified (`organisation-id`) — the consumer's primary Item bank is used.");
     }
     if (request.limit === undefined && block.paged) {
@@ -216,6 +249,11 @@ function finalize(rec: any, options: any): any {
     // no correct universal loop. See vocab.ts PagingEnd.
     paging_end: block?.pagingEnd,
     async: block?.async,
+    // Where an async operation is redeemed. Carried in the output for the same reason as
+    // paging_end: the recipe should branch on data it is given rather than hard-code the
+    // knowledge that `jobs` is the channel. Async operations are spread across four path
+    // families, so the channel is not inferable from the endpoint.
+    poll_with: block?.async ? { endpoint: "jobs", action: "get" } : undefined,
     paging: top.paging,
     request,
     // Every request field this job sets, mapped to its exact Learnosity path, so the

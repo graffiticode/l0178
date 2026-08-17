@@ -83,6 +83,48 @@ describe("the directive keeps paging as its own section", () => {
   });
 });
 
+describe("the directive gives async its own section", () => {
+  test("Polling is a required section, and never emitted alongside Paging", () => {
+    expect(has(directive, "## Polling")).toBe(true);
+    expect(has(directive, "never emit a Paging section for the same job")).toBe(true);
+  });
+
+  test("it reads the channel from poll_with rather than hard-coding jobs", () => {
+    expect(has(directive, "Read poll_with from the compiled output")).toBe(true);
+  });
+
+  test("it says where the job reference actually is", () => {
+    // data[0].job_reference. Writing data.job_reference yields undefined, and is the
+    // natural thing to write.
+    expect(has(directive, "data[0].job_reference, not data.job_reference")).toBe(true);
+    expect(has(instructions, "poll_with")).toBe(true);
+  });
+
+  test("it tells the reader to OMIT status, against the documentation", () => {
+    // Measured: the documented Default: ["completed"] is not applied, and mirroring it
+    // filters out the in-flight job — zero records, read as "no such job".
+    expect(has(directive, "OMIT `status` when polling")).toBe(true);
+    expect(has(directive, "following the documentation is the bug")).toBe(true);
+    expect(has(directive, "Default: [\"completed\"]")).toBe(true);
+  });
+
+  test("it terminates on a terminal status, not on records appearing", () => {
+    expect(has(directive, "completed` or `halted")).toBe(true);
+    expect(has(directive, "not on records appearing")).toBe(true);
+  });
+
+  test("the measured async facts carry their own consumer as provenance", () => {
+    // These came from a PRIVATE consumer on sandbox 386, not the demo bank the paging
+    // facts came from. A fact verified on one bank is not a promise about another.
+    expect(has(directive, "sandbox Item bank 386")).toBe(true);
+    expect(has(directive, "a different consumer from the demo-bank facts")).toBe(true);
+  });
+
+  test("the untested jobs-paging gap is marked untested, not asserted", () => {
+    expect(has(directive, "Untested")).toBe(true);
+  });
+});
+
 describe("the directive refuses L0177's differential apparatus", () => {
   test("it names the differential rule and says not to import it", () => {
     expect(has(directive, "never on a differential")).toBe(true);

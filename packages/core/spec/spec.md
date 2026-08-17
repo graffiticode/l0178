@@ -17,7 +17,7 @@ function, terminated with `{}` then `..`.
 | Construct | Arity | Shape |
 | :-------- | :---: | :---- |
 | `data-job` | 1 | Head; takes the whole property + block chain. |
-| Blocks: `items-get` `responses-get` | 2 | Take a `[list]` of request fields; select the endpoint and action. |
+| Blocks: `items-get` `responses-get` `jobs-get` `offlinepackage-get` | 2 | Take a `[list]` of request fields; select the endpoint and action. |
 | `paging` | 2 | Design intent: `EXHAUSTIVE` or `SINGLE-PAGE`. Never sent in a request. |
 | Request fields | 2 | `name value`, chained; the chain ends with `{}`. |
 
@@ -30,6 +30,8 @@ on the endpoint alone.
 | :---- | :------- | :----- | :---: | :--- | :---: |
 | `items-get` | `itembank/items` | `get` | yes | `meta.next` absent | no |
 | `responses-get` | `sessions/responses` | `get` | yes | an empty page | no |
+| `jobs-get` | `jobs` | `get` | no | — | no |
+| `offlinepackage-get` | `itembank/offlinepackage` | `get` | no | — | **yes** |
 
 The two disagree about how a paged read finishes, and each family's rule is a bug in the
 other — see Paging below. The compiled output carries `paging_end` so the recipe branches
@@ -83,6 +85,35 @@ because the kebab name alone is ambiguous about its separator.
 Note `status` here is a SESSION status, disjoint from the Item statuses `items-get`
 accepts. The same keyword means different things in different blocks, which is why
 fields are scoped to their block.
+
+## Request fields of `jobs-get`
+
+| Field | Learnosity path | Type |
+| :---- | :-------------- | :--- |
+| `references` | `references` | list of job references (max 1000) |
+| `status` | `status` | `"queued"` `"running"` `"halted"` `"completed"` |
+| `include` | `include` | list of strings |
+| `organisation-id` | `organisation_id` | number |
+| `mintime` / `maxtime` | `mintime` / `maxtime` | job CREATED time |
+| `limit` | `limit` | number (max 50) |
+
+## Request fields of `offlinepackage-get`
+
+| Field | Learnosity path | Type |
+| :---- | :-------------- | :--- |
+| `organisation-id` | `organisation_id` | number |
+| `activity-references` | `activity_references` | list of strings (max 1000) |
+| `items` | `items` | list of records `{id, reference, organisation-id?}`; `reference` required |
+| `base-directory` | `base_directory` | string |
+
+## Async
+
+`offlinepackage-get` returns a job reference instead of a result, so it is neither paged nor
+does it take a paging policy. The compiled output sets `async` and names the redemption
+channel in `poll_with`; poll `jobs-get` until the job reaches `completed` or `halted`.
+
+Note `offlinepackage-get` is an async **`get`** — the action verb says nothing about what an
+operation does.
 
 ## Paging
 

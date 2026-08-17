@@ -30,11 +30,15 @@ export const TOK = (kw: string) => kw.toUpperCase().replace(/-/g, "_");
 // Value types a field may declare.
 //   string | number | strings (list of strings) | tags (Learnosity TagsV2: records of
 //   {type, name?}) | timestamp (a UTC Unix integer OR an ISO 8601 string — Learnosity
-//   accepts either, so neither alone is a type error)
+//   accepts either, so neither alone is a type error) | records (a list of records
+//   validated against a declared element schema, so nested keys and types are checked by
+//   the same machinery as a top-level field)
 export type Constraint = {
   values?: string[];      // accepted values, for string / strings
   max?: number;           // maximum numeric value
   maxEntries?: number;    // maximum list length
+  schema?: Fields;        // element schema, for `records`
+  required?: string[];    // keys an element must carry, for `records`
 };
 export type Field = [string, string] | [string, string, Constraint];
 export type Fields = Record<string, Field>;
@@ -64,6 +68,11 @@ export type Block = {
   paged: boolean;        // returns meta.next, so a paging policy is required
   pagingEnd?: PagingEnd; // required when paged — how the loop knows it is done
   async: boolean;        // returns { data: { job_reference } } instead of a result
+  // True when the reference documents `organisation_id` as defaulting to the consumer's
+  // PRIMARY Item bank. Not universal: on `jobs` the field filters jobs to a bank and no
+  // default is documented, so omitting it means unfiltered rather than primary — and an
+  // advisory saying "the primary bank is used" would be plainly false there.
+  primaryBankDefault?: boolean;
   article: string;       // Zendesk article id — provenance for every field below
   fields: Fields;
 };
@@ -73,15 +82,16 @@ export const HEAD = "data-job";
 
 // Blocks. One keyword per (endpoint, action) pair; exactly one per program.
 //
-// SLICE: 2 of the 57 blocks are modelled — `itembank/items` + `get` and
-// `sessions/responses` + `get`. coverage.md lists the rest. A block that is not here is
-// not a typo — it is unbuilt, and the compiler says so rather than guessing at its
-// fields.
+// SLICE: 4 of the 57 blocks are modelled. coverage.md lists the rest. A block that is
+// not here is not a typo — it is unbuilt, and the compiler says so rather than guessing
+// at its fields.
 //
-// The two modelled blocks are deliberately one from each family, because that is what
-// exposed `pagingEnd`: they disagree about how a paged read ends, and a dialect that had
-// only ever seen `itembank/*` would have shipped a universal rule that never terminates
-// on `sessions/*`.
+// Each was chosen to DISAGREE with what was already modelled, which is the only reason
+// the traps below were found rather than assumed:
+//   items-get      itembank/*, paged, ends on an absent cursor
+//   responses-get  sessions/*, paged, ends on an empty page — the opposite rule
+//   jobs-get       not paged at all, and the channel every async operation redeems at
+//   offlinepackage-get  async, and an async `get` — the verb says nothing about the shape
 export const BLOCKS: Record<string, Block> = {
   "items-get": {
     endpoint: "itembank/items",
@@ -89,6 +99,7 @@ export const BLOCKS: Record<string, Block> = {
     paged: true,
     pagingEnd: "next-absent",
     async: false,
+    primaryBankDefault: true,
     article: "26076386828189",
     fields: {
       // filters
@@ -166,6 +177,58 @@ export const BLOCKS: Record<string, Block> = {
       "sort": ["sort", "string", { values: ["asc", "desc"] }],
       "limit": ["limit", "number", { max: 50 }],
       "next": ["next", "string"],
+    },
+  },
+
+  // The polling channel. Every async operation anywhere in the API is redeemed here, so
+  // this is a legitimate standalone block: a caller polls a job_reference they already
+  // hold. Not paged — it has no `next` — and not itself async.
+  "jobs-get": {
+    endpoint: "jobs",
+    action: "get",
+    paged: false,
+    async: false,
+    article: "26076318439197",
+    fields: {
+      "references": ["references", "strings", { maxEntries: 1000 }],
+      // Learnosity documents Default: ["completed"]. It does not behave that way, and
+      // MIRRORING the documented default is what breaks a polling loop — see
+      // instructions.md §6 and C16. Omitting this field returns every status.
+      "status": ["status", "strings", {
+        values: ["queued", "running", "halted", "completed"],
+      }],
+      "include": ["include", "strings"],
+      "organisation-id": ["organisation_id", "number"],
+      "mintime": ["mintime", "timestamp"],
+      "maxtime": ["maxtime", "timestamp"],
+      "limit": ["limit", "number", { max: 50 }],
+    },
+  },
+
+  // An async PRODUCER, and an async `get` — proof that the action verb says nothing about
+  // whether an operation is a plain read. It returns a job_reference instead of a result.
+  "offlinepackage-get": {
+    endpoint: "itembank/offlinepackage",
+    action: "get",
+    paged: false,
+    async: true,
+    primaryBankDefault: true,
+    article: "26076363707421",
+    fields: {
+      "organisation-id": ["organisation_id", "number"],
+      "activity-references": ["activity_references", "strings", { maxEntries: 1000 }],
+      // ItemObjects. `item_references` is documented alongside this and is DEPRECATED in
+      // favour of it, so it is left out rather than carried — the same treatment L0177
+      // gave `item_title`.
+      "items": ["items", "records", {
+        required: ["reference"],
+        schema: {
+          "id": ["id", "string"],
+          "reference": ["reference", "string"],
+          "organisation-id": ["organisation_id", "number"],
+        },
+      }],
+      "base-directory": ["base_directory", "string"],
     },
   },
 };

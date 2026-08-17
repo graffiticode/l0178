@@ -17,12 +17,22 @@ envelope carries a `meta.versions` object. Both are in `instructions.md` marked 
 un-written tricks that make this dialect worth having are, by definition, absent from the
 documentation — this map tells you where to go looking, never what you will find there.
 
-**Coverage against this denominator: 2 of 57 blocks built** — `itembank/items` + `get` and
-`sessions/responses` + `get` — both verified against a live consumer. The second was drawn from a
-DIFFERENT endpoint family on purpose, and it immediately paid: the two families disagree about how
-a paged read ends (`meta.next` disappears at exhaustion on `itembank/*`; on `sessions/*` it is
-always present and an empty page is the signal), so the universal paging rule the dialect had
-shipped never terminates on half the API. See C15 in `conflict-resolution.md`.
+**Coverage against this denominator: 4 of 57 blocks built**, all verified live:
+
+| Block | Family | Shape | Verified against |
+| :-- | :-- | :-- | :-- |
+| `itembank/items` + `get` | itembank | paged, ends on an absent cursor | public demo bank |
+| `sessions/responses` + `get` | sessions | paged, ends on an empty page | public demo bank |
+| `jobs` + `get` | jobs | not paged; the async polling channel | private consumer, sandbox 386 |
+| `itembank/offlinepackage` + `get` | itembank | **async** — returns a job reference | private consumer, sandbox 386 |
+
+Each was chosen to DISAGREE with what was already modelled, and each disagreement paid: the two
+paged blocks end their loops by opposite rules (C15), and the async pair showed that the
+documented `status` default on `jobs` is not real, so following the reference is what breaks a
+polling loop (C16).
+
+**Writes are never sent to the public demo account** — it is shared and writes persist. The
+private consumer covers what the demo cannot, and writes land in sandbox bank 386.
 
 ## Totals
 

@@ -1,10 +1,12 @@
 {
   "id": "0178",
-  "status": "EARLY — 2 of 57 blocks modelled (itembank/items + get, sessions/responses + get), both verified against Learnosity's public demo consumer. Everything else documented, not confirmed.",
+  "status": "EARLY — 4 of 57 blocks modelled (itembank/items + get, sessions/responses + get, jobs + get, itembank/offlinepackage + get). All verified live; async facts measured on a private consumer, sandbox bank 386.",
   "description": "Produces developer cookbook recipes for the Learnosity Data API — the server-to-server interface to a Learnosity Item bank. The client describes a data job (which operation, what the request carries, how far it reads) and L0178 validates it, flags holes as steering warnings, and via get_spec returns a host-language-neutral recipe: goal, preconditions, procedure, a dedicated paging section, gotchas, and verification steps. The failure it exists to prevent is a truncated read — measured against the live demo bank: meta.records read 2 on every one of 12 consecutive pages while 24 distinct Items came back, and a limit above the maximum is silently clamped so that every page looks short while meta.next is present throughout. Currently models reading Items from an Item bank; other operations are unbuilt, not unsupported. It does NOT author item content (that is L0176), does NOT cover the Author API authoring experience (that is L0177), and never calls a Learnosity API. Use ONLY when the user names Learnosity.",
   "supported_item_types": [
     "items-get",
-    "responses-get"
+    "responses-get",
+    "jobs-get",
+    "offlinepackage-get"
   ],
   "example_prompts": [
     {
@@ -31,6 +33,16 @@
       "prompt": "Pull every completed session response for activity numeracy since January.",
       "produces": "responses-get",
       "notes": "A sessions/* read — and a different paging contract from the Item bank: meta.next is always present there, so the loop must terminate on an empty page rather than on a missing token."
+    },
+    {
+      "prompt": "Build an offline device package for items calc-limit-2 and alg-quad-3 from bank 386.",
+      "produces": "offlinepackage-get",
+      "notes": "An async operation: it returns a job reference rather than a result, so the recipe writes a polling loop instead of a paging loop."
+    },
+    {
+      "prompt": "Check whether job dc39cf55-dbfc-4921 has finished yet.",
+      "produces": "jobs-get",
+      "notes": "The polling channel as a standalone job. Not paged — and the recipe must tell the reader to OMIT status, because mirroring the documented default hides the in-flight job."
     }
   ]
 }

@@ -43,6 +43,15 @@ Three details are binary and must be stated exactly:
 - **Never carry a paging rule from one endpoint to another, and never state one as general.** The symmetry is cruel: "stop when the page is empty" is the ONLY correct rule on a `empty-page` endpoint and a data-loss bug on a `next-absent` one. If the recipe covers one endpoint, give one rule and name the endpoint it belongs to.
 - **Never present a terminating loop as self-evidently correct.** Name the wrong loops explicitly: stopping when `data.length < limit`, stopping on `meta.records`, or re-deriving the request between pages instead of carrying the original parameters forward.
 
+## Polling
+**A required section whenever the compiled output has `async: true`. Never fold it into the Procedure, and never emit a Paging section for the same job — an operation returns a page or a job reference, never both.**
+
+- Read `poll_with` from the compiled output for the channel; do not hard-code the knowledge that `jobs` is where async work is redeemed.
+- **Say where the reference actually is.** The response is `data[0].job_reference`, not `data.job_reference` — the latter yields `undefined` and is the natural thing to write.
+- **Tell the reader to OMIT `status` when polling, and say why**, because the reference documents `Default: ["completed"]` and a careful developer will mirror it. Doing so filters out the in-flight job and returns zero records, which reads as "no such job" rather than "not finished yet". This is a case where following the documentation is the bug.
+- Terminate on a **terminal status** — `completed` or `halted` — not on records appearing, and not on a fixed number of attempts.
+- Give the loop a backstop and name it: a poll that never sees a terminal status must fail loudly rather than spin, and the per-endpoint rate limit applies to the polling endpoint too.
+
 ## Gotchas
 The mistakes that produce a wrong answer rather than an error, for THIS job. Always include:
 - **A truncated read looks exactly like a complete one** — HTTP 200, `meta.status: true`, a well-formed `data` array. There is no error to catch.
@@ -263,18 +272,41 @@ Observed shape **[verified]** — note `versions`, which the reference does not 
   `sessions` + `set` is discriminated on `data_format` (`failed_submission` takes a
   base64 string array; `from_template` takes session objects).
 
-### 6. Async operations [documented]
+### 6. Async operations
 
-- **13 of the 57 documented operations do not return a result.** They return
-  `{ "data": { "job_reference": "…" } }` and complete asynchronously.
+- **13 of the 57 documented operations do not return a result.** They return a job
+  reference and complete asynchronously. **The envelope shape is not uniform** — see the
+  measured note below; `itembank/offlinepackage` returns `data` as an ARRAY, while the
+  `sessions` article documents an object. Do not state one shape as general.
 - Poll with the **`jobs`** endpoint and action `get`, using the returned `job_reference`.
 - Async is a property of the individual operation, **not of a path prefix** — the 13 are
   spread across `itembank/*`, `sessions/*`, `reports/*` and `jobs/*`. Two of them are
   `get` operations (`itembank/offlinepackage`, `jobs/sessions/scores/subscores`).
 - Paging and async are disjoint: an operation returns either a page or a `job_reference`,
   never both. A procedure for an async operation has no paging step, and vice versa.
-- `itembank/items` + `get` — the operation this dialect currently models — is **paged and
-  synchronous**.
+- Of the four modelled blocks, `items-get` and `responses-get` are paged and synchronous,
+  `jobs-get` is neither paged nor async, and `offlinepackage-get` is async.
+
+
+**Measured against a PRIVATE consumer on sandbox Item bank 386, 2026-08-17** — a different
+consumer from the demo-bank facts above, which matters: these say the mechanism behaves this
+way, not that any particular bank does.
+
+- **⚠ The async envelope's `data` is an ARRAY [verified].** `itembank/offlinepackage` returns
+  `{"data": [{"job_reference": "…"}]}`. A caller writing `data.job_reference` gets
+  `undefined`; the reference is at `data[0].job_reference`. Learnosity's `sessions` article
+  documents the OBJECT form for that endpoint. Only the array form is verified — do not
+  assume one shape across endpoints, and tell the reader to check rather than generalise.
+- **⚠ Do NOT pass `status: ["completed"]` when polling [verified] — following the
+  documentation is what breaks the loop.** The reference gives `Default: ["completed"]` for
+  `jobs` + `get`. It does not behave that way: omitting `status` returns jobs of EVERY status,
+  `queued` included. A developer who mirrors the documented default filters out the in-flight
+  job and gets **zero records**, which is indistinguishable from "no such job" — a wait
+  misread as a failure. Omit `status`, or pass all four values explicitly.
+- **Terminal statuses are `completed` and `halted` [verified].** Poll until one of those, not
+  until records appear. A measured job went `queued` → `completed` inside five seconds.
+- `jobs` + `get` is **not paged** — no `next` — yet `limit` maxes at 50. There is no
+  documented way to retrieve more than 50 jobs. **Untested**; do not present it as if it were.
 
 ### 7. Write safety — recipe content only
 
