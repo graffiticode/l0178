@@ -283,3 +283,29 @@ describe("instructions.md documents the whole vocabulary", () => {
     expect(instructions).toContain("there is no field that names an endpoint");
   });
 });
+
+/**
+ * Enumerated values are quoted STRINGS; only the paging policy is a bare TAG. vocab.ts types them
+ * as `{ type: "string", values: [...] }`, and lexicon.ts registers TAG tokens only for PAGING_TAGS.
+ *
+ * The first vocabulary tables rendered both alike — `sort` listed as `asc` `desc` in backticks —
+ * and the generator reasonably wrote `sort desc`, which is an undefined reference. Three of sixteen
+ * corpus programs failed that way in one batch (`desc`, `per-dichotomous`, `reference`). A table
+ * that shows a value without showing its FORM is a table that teaches the wrong form.
+ */
+describe("instructions.md shows the form of enumerated values", () => {
+  const instructions = readFileSync(
+    fileURLToPath(new URL("../spec/instructions.md", import.meta.url)), "utf-8",
+  ).replace(/\s+/g, " ");
+
+  test("the bare-vs-quoted rule is stated", () => {
+    expect(instructions).toContain("Only `EXHAUSTIVE` and `SINGLE-PAGE` are bare TAG tokens");
+    expect(instructions).toContain("EVERY other enumerated value is a QUOTED STRING");
+  });
+
+  test("every value-constrained field shows quotes in its table row", () => {
+    for (const v of ['`"asc"`', '`"desc"`', '`"per-dichotomous"`', '`"title"`', '`["published"]`']) {
+      expect(instructions).toContain(v);
+    }
+  });
+});

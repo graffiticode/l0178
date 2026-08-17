@@ -32,6 +32,9 @@ Uniform rules:
   fields. Exactly one block per program.
 - **`paging`** is arity 2 and takes `EXHAUSTIVE` or `SINGLE-PAGE` — an UPPERCASE tag, not
   a quoted string.
+- **Only `EXHAUSTIVE` and `SINGLE-PAGE` are bare TAG tokens.** EVERY other enumerated value is a
+  QUOTED STRING — `sort "desc"`, `sort-field "title"`, `scoring-type "per-dichotomous"`,
+  `status ["published"]`. Writing one bare (`sort desc`) is an undefined reference, not a value.
 - **Request fields are arity-2 lowercase-kebab functions** — `name value` — that chain;
   a chain ends with `{}`.
 - **Everything except the block and the paging policy is optional.** An unfiltered read is
@@ -67,9 +70,9 @@ paged block its absence is a HOLE — do not choose a policy the request did not
 | Field | Learnosity path | Type |
 | :---- | :-------------- | :--- |
 | `references` | `references` | list of strings (max 1000) |
-| `status` | `status` | list of `"published"` `"unpublished"` `"archived"` |
+| `status` | `status` | list of quoted strings: `["published"]` `["unpublished"]` `["archived"]` |
 | `created-by` | `created_by` | list of strings |
-| `scoring-type` | `scoring_type` | `per-question` `per-dichotomous` `dependent` |
+| `scoring-type` | `scoring_type` | quoted string: `"per-question"` `"per-dichotomous"` `"dependent"` |
 | `item-pool-id` | `item_pool_id` | string |
 | `organisation-id` | `organisation_id` | number |
 | `authoring-workflow-reference` | `authoring_workflow.reference` | string |
@@ -81,8 +84,8 @@ paged block its absence is a HOLE — do not choose a policy the request did not
 | `advanced-tags-either` | `advanced_tags.either` | TagsV2 records |
 | `advanced-tags-none` | `advanced_tags.none` | TagsV2 records |
 | `include-items` | `include.items` | list of response properties to return |
-| `sort` | `sort` | `asc` `desc` |
-| `sort-field` | `sort_field` | `created` `updated` `reference` `title` |
+| `sort` | `sort` | quoted string: `"asc"` `"desc"` |
+| `sort-field` | `sort_field` | quoted string: `"created"` `"updated"` `"reference"` `"title"` |
 | `mintime` / `maxtime` | `mintime` / `maxtime` | Unix integer or ISO 8601 string |
 | `limit` | `limit` | number (max 50 — above it is silently clamped) |
 | `next` | `next` | string — a cursor the API RETURNS, not a value to author |
@@ -94,12 +97,12 @@ paged block its absence is a HOLE — do not choose a policy the request did not
 | `session-id` | `session_id` | list of strings (max 1000) |
 | `user-id` | `user_id` | list of strings (max 1000) |
 | `activity-id` | `activity_id` | list of strings (max 1000) |
-| `status` | `status` | list of `"Incomplete"` `"Completed"` `"Discarded"` `"Pending Scoring"` |
+| `status` | `status` | list of quoted strings: `["Completed"]` `["Incomplete"]` `["Discarded"]` `["Pending Scoring"]` |
 | `mintime` / `maxtime` | `mintime` / `maxtime` | session UPDATED time |
 | `mintime-started` / `maxtime-started` | `mintime_started` / `maxtime_started` | session START time |
 | `mintime-completed` / `maxtime-completed` | `mintime_completed` / `maxtime_completed` | SUBMISSION time |
 | `include-session-metadata` | `include.sessions.session_metadata` | list of strings |
-| `sort` | `sort` | `asc` `desc` |
+| `sort` | `sort` | quoted string: `"asc"` `"desc"` |
 | `limit` | `limit` | number (max 50) |
 | `next` | `next` | string — a cursor the API RETURNS, not a value to author |
 
