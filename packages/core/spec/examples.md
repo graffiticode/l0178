@@ -7,7 +7,14 @@ the generator to produce examples organically; the programs they yield are the c
 They are phrased the way a developer actually asks — data they need out of a Learnosity bank, and
 what they intend to do about it — not as descriptions of the vocabulary. Between them they should
 reach every part of the modelled surface: both blocks, every filter, the three session time axes,
-response shaping, both paging policies, and the combinations the compiler steers away from.
+response shaping, and both paging policies.
+
+**Every prompt here must yield a program worth RETRIEVING.** A RAG row is a bare prompt-and-code
+pair — the compiler's warnings do not travel with it — so a program carrying a value the vocabulary
+tells you not to author teaches that value with nothing to explain it. Prompts whose correct answer
+is a refusal, and the two whose programs would bake in an over-maximum `limit` or a hand-authored
+`next`, live in `boundary-tests.md` instead. Run those to check the boundary holds; never mark
+their output.
 
 **Every request below says HOW FAR IT READS, and names its own references, banks, users and
 activities.** That is deliberate, and it is what makes these usable as corpus. The starting
@@ -59,17 +66,14 @@ never calls the API itself.
 27. Pull the full set of responses for users student_0001, student_0002 and student_0003 on activity numeracy.
 28. Read every session for activity numeracy that was UPDATED in the last 24 hours — we poll this hourly.
 
-## Requests that should raise a steering warning
+## Requests that raise an advisory warning
 
-These are legitimate jobs that the compiler accepts but wants to steer. The programs they yield
-should carry warnings, and the recipe should carry them forward — do not silently "fix" the
-request.
+Legitimate jobs the compiler accepts but wants to steer. The programs they yield are correct and
+worth retrieving; the warning is advisory and rides alongside, not a defect in the code.
 
-29. Pull all Items from bank 4021 with a page size of 200 so it goes faster.
 30. Get every Item that is NOT tagged Grade: 5 from bank 88.
 31. Fetch all Items whose workflow state is Approved.
 32. Read all the Items in the bank — no filter, just everything we have.
-33. Continue the Item read from cursor 1445216251.1165015, all remaining pages.
 34. Pull all the published Items — I don't know our bank id, just use the default one.
 
 ## Under-specified requests (the compiler should flag the holes)
@@ -83,20 +87,3 @@ choosing exhaustive.
 37. Fetch Items tagged Subject: Science.
 38. Read the responses for user student_0001.
 
-## Not built yet (should be declined, not designed)
-
-Only 2 of the Data API's 57 operations are modelled. A request for an unbuilt one must be turned
-away rather than answered with the nearest thing — see `coverage.md`.
-
-39. Write these 40 Items into bank 4021. *(itembank/items + set — unbuilt)*
-40. Duplicate activity unit-3-quiz into our sandbox bank. *(itembank/activities/duplicate — unbuilt)*
-41. Kick off a subscore recalculation for these sessions and poll it until it finishes. *(the async job family — unbuilt)*
-42. Pull the score summary for every session in activity numeracy. *(sessions/scores — unbuilt; sessions/responses is the one modelled read)*
-43. Delete session ef4f80b8-e281-41f4-9efd-349b7eb9dd37. *(sessions + delete — unbuilt, and a write)*
-
-## Out of scope (should be redirected, not designed)
-
-44. Write me a multiple-choice question about photosynthesis with four options. *(item content → L0176)*
-45. Embed the Learnosity item editor so our authors can edit these Items. *(a UX over the data → L0177)*
-46. Build me a dashboard that charts these session scores by class. *(a rendered report — the UX view of results; no dialect covers it yet)*
-47. Give me the Node.js code to page through the Item bank. *(the recipe is language-neutral; it describes the procedure, it doesn't emit code)*
