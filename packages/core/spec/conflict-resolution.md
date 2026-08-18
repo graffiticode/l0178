@@ -45,6 +45,8 @@ reader can overturn it with better evidence instead of re-litigating it from scr
 | C17 | Shape of the async `data` envelope | RESOLVED — measured; genuinely differs |
 | C18 | Whether `set` merges or replaces | RESOLVED — measured; docs silent |
 | C19 | Whether the VERB predicts merge-vs-replace | RESOLVED — measured; it does not |
+| C20 | What `include` does, and how it fails | RESOLVED — measured; differs per endpoint |
+| C21 | Tags are written and read in different shapes | RESOLVED — measured; docs silent |
 
 ---
 
@@ -420,19 +422,70 @@ the same reason. The merge advisory says explicitly that it does not generalise.
 **Why it matters.** "Add a tag" written as `set` silently deletes every other tag on the Item, and
 the response echoes nothing. This is C18's hazard reachable through a different door.
 
-**Related, measured while testing:** an invalid value in `include` is REJECTED (`meta.status`
-false, code 20004), not silently ignored — the one place so far where this API fails loudly rather
-than plausibly. Worth knowing because an empty-looking read is then a FAILED request, not a filter
-that matched nothing. This register's own author misread exactly that during the probe by not
-checking `meta.status` — the rule the dialect exists to teach.
+**Related, and now its own entry:** the `include` behaviour noticed while probing this turned out
+to be a conflict in its own right — see C20.
+
+### C20 — What `include` does, and how it fails · RESOLVED (measured; it differs per endpoint)
+
+`include` appears on many endpoints and the reference describes it two different ways. On
+`itembank/items` it is "The Item properties to be returned in the response". On `jobs` it is
+"Restrict the properties returned in the data object", with a stated
+`Default: ["reference", "type", "status", "dt_created", "dt_completed"]`.
+
+Measured on sandbox 386, and both halves of the documentation are wrong somewhere:
+
+| | `itembank/items` | `jobs` |
+| :-- | :-- | :-- |
+| effect | **ADDITIVE** — no include gave 12 keys, `include:["dt_created"]` gave 13 | **NONE** — `include:["reference"]` returned the same 6 keys as no include at all |
+| invalid value | **REJECTED** — `meta.status` false, code **20004** | **SILENTLY IGNORED** — `meta.status` true, same 6 keys |
+
+Two separate problems, and the second is the dangerous one.
+
+**The documented restriction does not happen.** On `jobs`, `include` had no observable effect, so
+a caller who uses it to trim a large response gets the full response and no indication. The
+documented default is also incomplete: `results` came back and is not in the documented list.
+
+**⚠ The same field name fails CLOSED on one endpoint and OPEN on another.** An unrecognised value
+is a hard error on `itembank/items` and is discarded without comment on `jobs`. So a typo in an
+`include` is caught on one endpoint and invisible on the other — and "invisible" here means the
+caller believes they asked for something they did not get. This is the only fail-open behaviour
+found in the Data API, and it sits in the one place a developer would reasonably assume uniformity.
+
+**Depends on it:** nothing in the vocabulary yet — `include` is modelled per block as a plain
+string list, which remains correct. But no recipe may state a general rule about what `include`
+does, and any recipe using it should say which of the two behaviours applies to the endpoint in
+hand.
+
+**How it was found:** by misreading it. A tag probe read empty at every step and was written up as
+"update replaces"; the request had in fact FAILED on an invalid `include` and `meta.status` was
+never checked — the exact rule this dialect exists to teach. The wrong conclusion was discarded
+and the probe redone (C19).
+
+### C21 — Tags are written and read in different shapes · RESOLVED (measured; the docs say nothing)
+
+Tags are **written** as a list of TagsV2 records — `[{ "type": "probe", "name": "A" }]` — which is
+what the reference documents for `tags` on every write endpoint.
+
+They come **back** from a read as an object keyed by type: `{"probe": ["A", "B"]}`.
+
+The reference documents the write shape and never mentions the read shape, so nothing warns that
+the two differ. A caller who round-trips — read an Item's tags, modify, write them back — cannot
+pass what they received straight through; it has to be transposed first, and the natural assumption
+is that it does not.
+
+**Not a contradiction between sources, an omission in one** — the same class as C18. Recorded
+because a read-modify-write on tags is an obvious thing to attempt and the shapes silently do not
+line up.
+
+**Depends on it:** `instructions.md` states both shapes where the tag blocks are documented.
 
 ---
 
 ## Caveat on "measured"
 
 Measurements come from two consumers, and each entry says which. C1–C15 were taken against
-**Learnosity's public demo Item bank** on 2026-08-13; C16–C19 against a **private consumer on
-sandbox Item bank 386** on 2026-08-17 (C17 closed there the same day). Both used `learnosity-sdk-nodejs` 0.7.0 against
+**Learnosity's public demo Item bank** on 2026-08-13; C16–C21 against a **private consumer on
+sandbox Item bank 386** on 2026-08-17/18 (C17 closed there the same day). Both used `learnosity-sdk-nodejs` 0.7.0 against
 `v2025.2.LTS` (concrete `v1.79.5`).
 
 Writes are never sent to the public demo account — it is shared, and writes persist. That policy

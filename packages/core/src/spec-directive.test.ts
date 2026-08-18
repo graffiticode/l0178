@@ -278,10 +278,42 @@ describe("the envelope and its traps", () => {
     // The register's own contract is that an unresolved conflict stays unresolved IN
     // WRITING. This asserts the table and the entries agree: every row marked OPEN must
     // have a matching entry heading, so a status can't be quietly downgraded in one place.
-    const rowsOpen = [...register.matchAll(/\| (C\d+) \|[^|]+\|([^|]*)\|/g)]
-      .filter(m => /OPEN/.test(m[2])).map(m => m[1]);
-    const headingsOpen = [...register.matchAll(/### (C\d+) —[^\n]*OPEN/g)].map(m => m[1]);
+    //
+    // Read the RAW file, not the normalized one: `norm` collapses newlines, so a
+    // line-anchored pattern would run across the whole document and match on any stray
+    // "OPEN" in prose. It did exactly that once C20 described a fail-OPEN behaviour.
+    const raw = readFileSync(
+      fileURLToPath(new URL("../spec/conflict-resolution.md", import.meta.url)), "utf-8",
+    );
+    const rowsOpen = [...raw.matchAll(/^\| (C\d+) \|([^|]*)\|([^|]*)\|/gm)]
+      .filter(m => /\bOPEN\b/.test(m[3])).map(m => m[1]);
+    const headingsOpen = [...raw.matchAll(/^### (C\d+) —.*$/gm)]
+      .filter(m => /\bOPEN\b/.test(m[0])).map(m => m[1]);
     expect(rowsOpen.sort()).toEqual(headingsOpen.sort());
+  });
+
+  test("every register entry has both a table row and an entry heading", () => {
+    // The failure this catches is an entry added to one and not the other — which is how
+    // a conflict ends up recorded nowhere a reader will look.
+    const raw = readFileSync(
+      fileURLToPath(new URL("../spec/conflict-resolution.md", import.meta.url)), "utf-8",
+    );
+    const rows = [...raw.matchAll(/^\| (C\d+) \|/gm)].map(m => m[1]);
+    const headings = [...raw.matchAll(/^### (C\d+) —/gm)].map(m => m[1]);
+    expect(rows).toEqual(headings);
+  });
+
+  test("include is described per endpoint, including how it fails", () => {
+    // The only fail-open behaviour found in this API, and it sits under a field name a
+    // developer would assume behaves uniformly.
+    expect(has(directive, "does not mean one thing, and it does not fail one way")).toBe(true);
+    expect(has(directive, "SILENTLY IGNORED")).toBe(true);
+    expect(has(directive, "a typo is invisible")).toBe(true);
+  });
+
+  test("the tag read/write shape mismatch is stated", () => {
+    expect(has(directive, "Tags go in and come out in different shapes")).toBe(true);
+    expect(has(directive, "has to transpose first")).toBe(true);
   });
 
   test("rate limits are per endpoint over a 5-second window", () => {
