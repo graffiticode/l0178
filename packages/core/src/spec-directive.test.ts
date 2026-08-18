@@ -547,7 +547,9 @@ describe("examples.md covers the whole vocabulary", () => {
   });
 
   test("the header does not claim a block count it cannot back", () => {
-    // "all N blocks" in the preamble goes stale silently; tie it to the registry.
+    // "all N blocks" in the preamble goes stale silently; tie it to the registry. Prefer a
+    // NUMERAL in the doc: the spelled-out map below runs out, and a guard that fails on
+    // "thirty" teaches people to delete the guard rather than fix the count.
     const m = examples.match(/all (\w+) blocks/);
     expect(m, "examples.md should say how much surface it covers").toBeTruthy();
     const words: Record<string, number> = {

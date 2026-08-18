@@ -53,6 +53,18 @@ language.
 | Block | Endpoint | Action | Paged | Loop ends on | Async |
 | :---- | :------- | :----- | :---: | :--- | :---: |
 | `items-get` | `itembank/items` | `get` | yes | `meta.next` **absent** | no |
+| `activities-get` | `itembank/activities` | `get` | yes | `meta.next` **absent** | no |
+| `questions-get` | `itembank/questions` | `get` | yes | `meta.next` **absent** | no |
+| `features-get` | `itembank/features` | `get` | yes | `meta.next` **absent** | no |
+| `pools-get` | `itembank/pools` | `get` | yes | `meta.next` **absent** | no |
+| `workflows-get` | `itembank/workflows` | `get` | yes | `meta.next` **absent** | no |
+| `tagging-tags-get` | `itembank/tagging/tags` | `get` | yes | `meta.next` **absent** | no |
+| `tags-get` | `itembank/tags` | `get` | no | — | no |
+| `tag-hierarchies-get` | `itembank/tagging/hierarchies` | `get` | no | — | no |
+| `tag-hierarchy-nodes-get` | `itembank/tagging/hierarchies/nodes` | `get` | no | — | no |
+| `upload-assets-get` | `itembank/upload/assets` | `get` | no | — | no |
+| `activity-templates-get` | `itembank/activities/templates` | `get` | no | — | no |
+| `player-templates-get` | `itembank/playertemplates` | `get` | no | — | no |
 | `responses-get` | `sessions/responses` | `get` | yes | an **empty page** | no |
 | `jobs-get` | `jobs` | `get` | no | — | no |
 | `offlinepackage-get` | `itembank/offlinepackage` | `get` | no | — | **yes** |
@@ -71,7 +83,7 @@ language.
 | `response-scores-update` | `sessions/responses/scores` | `update` | no | — | **yes** |
 | `response-grading-update` | `sessions/responses/scores/grading` | `update` | no | — | no |
 
-Only these eighteen of the Data API's 57 operations are modelled. A request for any other —
+Only these thirty of the Data API's 57 operations are modelled. A request for any other —
 writes, duplicates, `sessions/scores` — must be declined, not answered with the nearest
 built thing.
 
@@ -140,6 +152,41 @@ the recipe:
 `status` here is a SESSION status, disjoint from the Item statuses `items-get` accepts.
 The same keyword means different things in different blocks, which is why fields are
 scoped to their block: a field the block does not define is a parse error.
+
+## Request fields of the Item bank reads
+
+All six paged reads end on an absent `meta.next` — measured, not assumed.
+
+| Block | Fields |
+| :---- | :----- |
+| `activities-get` | `references`, `status`, `tags`, `advanced-tags-all`/`-either`/`-none`, `item-references-all`, `item-references-either`, `include-activities`, `populate-userdata`, `organisation-id`, `item-pool-id`, `sort`, `sort-field`, `mintime`, `maxtime`, `limit`, `next` |
+| `questions-get` | `references`, `item-references`, `types`, `include-questions`, `organisation-id`, `item-pool-id`, `sort`, `sort-field`, `mintime`, `maxtime`, `limit`, `next` |
+| `features-get` | as `questions-get`, plus `content-search` and `include-features` |
+| `pools-get` | `references`, `status`, `organisation-id`, `sort`, `sort-field`, `limit`, `next` |
+| `workflows-get` | `references`, `organisation-id`, `limit`, `next` |
+| `tagging-tags-get` | `names`, `types`, `organisation-id`, `item-pool-id`, `sort`, `sort-field`, `limit`, `next` |
+| `tags-get` | `tags`, `types`, `organisation-id`, `item-pool-id` |
+| `tag-hierarchies-get` | `references`, `organisation-id` |
+| `tag-hierarchy-nodes-get` | `reference`, `path`, `organisation-id` |
+| `upload-assets-get` | `subkeys`, `subkey-types`, `organisation-id` |
+| `activity-templates-get`, `player-templates-get` | `organisation-id` only |
+
+Four things worth knowing before writing one of these:
+
+- **`status` now means a FOURTH thing.** Activities use `published`/`unpublished`/`archived`
+  like Items; **pools** use `published`/`unpublished`/`pending`/`halted`. Jobs and sessions
+  have their own sets again. The values belong to the field in its block, never to the
+  dialect.
+- **`tags` is not always TagsV2.** On `tags-get` it is a list of plain tag NAMES; everywhere
+  else it is records of `{type, name}`. `tag-hierarchy-nodes-get` takes `path`, an ORDERED
+  list of TagsV2 objects.
+- **`item-references` is deprecated on `offlinepackage-get` and current on `questions-get`
+  and `features-get`.** Same Learnosity name, opposite advice, which is why it is a field of
+  the blocks that document it rather than of the dialect.
+- **`populate-userdata` does nothing on its own** — it only changes `created_by` and
+  `last_updated_by`, and only when those were requested via `include-activities`.
+- `content-search` on `features-get` should be paired with another filter; Learnosity asks
+  this for performance.
 
 ## Request fields of `jobs-get`
 

@@ -351,6 +351,180 @@ export const BLOCKS: Record<string, Block> = {
     },
   },
 
+  // ---- the itembank read surface ----
+  // Every one is paged or trivially small, and every one was exercised against sandbox
+  // 386. `status` reaches a FOURTH distinct meaning here (pools), after Item, job and
+  // session statuses — which is why values live on the field and never on the dialect.
+  "activities-get": {
+    endpoint: "itembank/activities", action: "get",
+    paged: true, pagingEnd: "next-absent", async: false,
+    primaryBankDefault: true, article: "26076378893725",
+    fields: {
+      "references": ["references", "strings", { maxEntries: 1000 }],
+      "status": ["status", "strings", { values: ["published", "unpublished", "archived"] }],
+      "organisation-id": ["organisation_id", "number"],
+      "item-pool-id": ["item_pool_id", "string"],
+      // Combination search: `all` must all be present, `either` at least one.
+      "item-references-all": ["item_references.all", "strings"],
+      "item-references-either": ["item_references.either", "strings"],
+      "tags": ["tags", "tags"],
+      "advanced-tags-all": ["advanced_tags.all", "tags"],
+      "advanced-tags-either": ["advanced_tags.either", "tags"],
+      "advanced-tags-none": ["advanced_tags.none", "tags"],
+      "include-activities": ["include.activities", "strings", {
+        values: ["created_by", "dt_created", "dt_updated", "last_updated_by", "metadata", "title"],
+      }],
+      // Only meaningful alongside include-activities created_by / last_updated_by.
+      "populate-userdata": ["populate_userdata", "boolean"],
+      "sort": ["sort", "string", { values: ["asc", "desc"] }],
+      "sort-field": ["sort_field", "string", { values: ["created", "updated"] }],
+      "mintime": ["mintime", "timestamp"],
+      "maxtime": ["maxtime", "timestamp"],
+      "limit": ["limit", "number"],
+      "next": ["next", "string"],
+    },
+  },
+  "questions-get": {
+    endpoint: "itembank/questions", action: "get",
+    paged: true, pagingEnd: "next-absent", async: false,
+    primaryBankDefault: true, article: "26076378985629",
+    fields: {
+      "references": ["references", "strings", { maxEntries: 1000 }],
+      "item-references": ["item_references", "strings", { maxEntries: 1000 }],
+      "types": ["types", "strings"],
+      "organisation-id": ["organisation_id", "number"],
+      "item-pool-id": ["item_pool_id", "string"],
+      "include-questions": ["include.questions", "strings", {
+        values: ["dt_created", "dt_updated"] }],
+      "sort": ["sort", "string", { values: ["asc", "desc"] }],
+      "sort-field": ["sort_field", "string", { values: ["created", "updated"] }],
+      "mintime": ["mintime", "timestamp"],
+      "maxtime": ["maxtime", "timestamp"],
+      "limit": ["limit", "number"],
+      "next": ["next", "string"],
+    },
+  },
+  "features-get": {
+    endpoint: "itembank/features", action: "get",
+    paged: true, pagingEnd: "next-absent", async: false,
+    primaryBankDefault: true, article: "26076399481501",
+    fields: {
+      "references": ["references", "strings", { maxEntries: 1000 }],
+      "item-references": ["item_references", "strings", { maxEntries: 1000 }],
+      "types": ["types", "strings"],
+      // Learnosity asks that this be paired with another filter, for performance.
+      "content-search": ["content_search", "string"],
+      "organisation-id": ["organisation_id", "number"],
+      "item-pool-id": ["item_pool_id", "string"],
+      "include-features": ["include.features", "strings", {
+        values: ["dt_created", "dt_updated"] }],
+      "sort": ["sort", "string", { values: ["asc", "desc"] }],
+      "sort-field": ["sort_field", "string", { values: ["created", "updated"] }],
+      "mintime": ["mintime", "timestamp"],
+      "maxtime": ["maxtime", "timestamp"],
+      "limit": ["limit", "number"],
+      "next": ["next", "string"],
+    },
+  },
+  "pools-get": {
+    endpoint: "itembank/pools", action: "get",
+    paged: true, pagingEnd: "next-absent", async: false,
+    primaryBankDefault: true, article: "26076363663005",
+    fields: {
+      "references": ["references", "strings"],
+      // FOURTH meaning of `status`: pools are published/unpublished/pending/halted.
+      "status": ["status", "strings", {
+        values: ["published", "unpublished", "pending", "halted"] }],
+      "organisation-id": ["organisation_id", "number"],
+      "sort": ["sort", "string", { values: ["asc", "desc"] }],
+      "sort-field": ["sort_field", "string", { values: ["created", "updated"] }],
+      "limit": ["limit", "number", { max: 50 }],
+      "next": ["next", "string"],
+    },
+  },
+  "workflows-get": {
+    endpoint: "itembank/workflows", action: "get",
+    paged: true, pagingEnd: "next-absent", async: false,
+    primaryBankDefault: true, article: "26076399599005",
+    fields: {
+      "references": ["references", "strings", { maxEntries: 1000 }],
+      "organisation-id": ["organisation_id", "number"],
+      "limit": ["limit", "number", { max: 50 }],
+      "next": ["next", "string"],
+    },
+  },
+  "tagging-tags-get": {
+    endpoint: "itembank/tagging/tags", action: "get",
+    paged: true, pagingEnd: "next-absent", async: false,
+    primaryBankDefault: true, article: "26076379042589",
+    fields: {
+      "names": ["names", "strings"],
+      // Required when sort-field is "sort_key".
+      "types": ["types", "strings"],
+      "organisation-id": ["organisation_id", "number"],
+      "item-pool-id": ["item_pool_id", "string"],
+      "sort": ["sort", "string", { values: ["asc", "desc"] }],
+      "sort-field": ["sort_field", "string", {
+        values: ["sort_key", "created", "updated"] }],
+      "limit": ["limit", "number", { max: 50 }],
+      "next": ["next", "string"],
+    },
+  },
+  "tags-get": {
+    endpoint: "itembank/tags", action: "get",
+    paged: false, async: false,
+    primaryBankDefault: true, article: "26076379042589",
+    fields: {
+      "tags": ["tags", "strings"],   // NOTE: plain names here, not TagsV2 records
+      "types": ["types", "strings"],
+      "organisation-id": ["organisation_id", "number"],
+      "item-pool-id": ["item_pool_id", "string"],
+    },
+  },
+  "tag-hierarchies-get": {
+    endpoint: "itembank/tagging/hierarchies", action: "get",
+    paged: false, async: false,
+    primaryBankDefault: true, article: "26076373806749",
+    fields: {
+      "references": ["references", "strings"],
+      "organisation-id": ["organisation_id", "number"],
+    },
+  },
+  "tag-hierarchy-nodes-get": {
+    endpoint: "itembank/tagging/hierarchies/nodes", action: "get",
+    paged: false, async: false,
+    primaryBankDefault: true, article: "26076373806749",
+    fields: {
+      "reference": ["reference", "string"],
+      "path": ["path", "tags"],   // an ORDERED list of TagsV2 objects
+      "organisation-id": ["organisation_id", "number"],
+    },
+  },
+  "upload-assets-get": {
+    endpoint: "itembank/upload/assets", action: "get",
+    paged: false, async: false,
+    primaryBankDefault: true, article: "26076399578397",
+    fields: {
+      "subkeys": ["subkeys", "strings"],
+      // Media types for files whose type cannot be auto-detected; every key must match
+      // an entry in subkeys. A free-form map, so not modelled further.
+      "subkey-types": ["subkey_types", "unmodeled"],
+      "organisation-id": ["organisation_id", "number"],
+    },
+  },
+  "activity-templates-get": {
+    endpoint: "itembank/activities/templates", action: "get",
+    paged: false, async: false,
+    primaryBankDefault: true, article: "26076390673565",
+    fields: { "organisation-id": ["organisation_id", "number"] },
+  },
+  "player-templates-get": {
+    endpoint: "itembank/playertemplates", action: "get",
+    paged: false, async: false,
+    primaryBankDefault: true, article: "26076390673565",
+    fields: { "organisation-id": ["organisation_id", "number"] },
+  },
+
   // Activity tags, the sibling of items-tags-*. VERIFIED on sandbox 386: seeded A,B;
   // `update` with C gave A,B,C; `set` with D gave D alone — the same split as items/tags.
   // Two endpoints agreeing is evidence about the TAGS pattern, not about `update` in

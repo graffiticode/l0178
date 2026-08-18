@@ -432,11 +432,19 @@ describe("records fields — the items list of an offline package", () => {
     expect(hasWarning(out, "must be a number")).toBe(true);
   });
 
-  test("the deprecated item_references field is not modelled", async () => {
-    // Learnosity documents it alongside `items` and marks it deprecated; carrying it would
-    // teach a reader to reach for it. An unknown property is a parse error.
-    await expect(compile(`data-job offlinepackage-get [ item-references ["a"] {} ] {}..`))
-      .rejects.toBeTruthy();
+  test("the deprecated item_references is not a field of THIS block", async () => {
+    // Learnosity documents it alongside `items` on offlinepackage and marks it deprecated.
+    // The keyword nonetheless exists, because item_references is a live, current field on
+    // questions-get and features-get — so this is not a parse error but a scoping one, and
+    // the fold drops it. Deprecated-here and current-there is exactly why fields belong to
+    // blocks rather than to the dialect.
+    const out = await compile(`data-job offlinepackage-get [ items [{reference: "a"}] item-references ["a"] {} ] {}..`);
+    expect(hasWarning(out, "isn't a request field of this operation")).toBe(true);
+    expect(out.request["item-references"]).toBeUndefined();
+    // ...and it IS legal on the blocks that document it as current.
+    const q = await compile(`data-job paging EXHAUSTIVE questions-get [ item-references ["a"] {} ] {}..`);
+    expect(q.request["item-references"]).toEqual(["a"]);
+    expect(q.paths["item-references"]).toBe("item_references");
   });
 });
 

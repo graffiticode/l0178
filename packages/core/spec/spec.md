@@ -35,6 +35,18 @@ API branches on a field value it is `(endpoint, action, discriminant)`, which is
 | `offlinepackage-get` | `itembank/offlinepackage` | `get` | async | — | — |
 | `items-set` | `itembank/items` | `set` | writes | — | replace |
 | `items-tags-set` | `itembank/items/tags` | `set` | writes | — | replace |
+| `activities-get` | `itembank/activities` | `get` | paged | `meta.next` absent | — |
+| `questions-get` | `itembank/questions` | `get` | paged | `meta.next` absent | — |
+| `features-get` | `itembank/features` | `get` | paged | `meta.next` absent | — |
+| `pools-get` | `itembank/pools` | `get` | paged | `meta.next` absent | — |
+| `workflows-get` | `itembank/workflows` | `get` | paged | `meta.next` absent | — |
+| `tagging-tags-get` | `itembank/tagging/tags` | `get` | paged | `meta.next` absent | — |
+| `tags-get` | `itembank/tags` | `get` | read | — | — |
+| `tag-hierarchies-get` | `itembank/tagging/hierarchies` | `get` | read | — | — |
+| `tag-hierarchy-nodes-get` | `itembank/tagging/hierarchies/nodes` | `get` | read | — | — |
+| `upload-assets-get` | `itembank/upload/assets` | `get` | read | — | — |
+| `activity-templates-get` | `itembank/activities/templates` | `get` | read | — | — |
+| `player-templates-get` | `itembank/playertemplates` | `get` | read | — | — |
 | `activities-tags-set` | `itembank/activities/tags` | `set` | writes | — | replace |
 | `activities-tags-update` | `itembank/activities/tags` | `update` | writes | — | merge |
 | `pools-update` | `itembank/pools` | `update` | async, writes | — | **not established** |
