@@ -37,10 +37,10 @@ job* (which endpoint, which action, what the request carries); L0178 validates i
 holes as steering warnings, and — via `get_spec` — returns a host-language-neutral developer
 recipe covering signing, paging, the response envelope, and verification.
 
-**Status: early.** Ten operations are modelled — `items-get`, `items-set`,
+**Status: early.** Eighteen operations are modelled — `items-get`, `items-set`,
 `items-tags-set`, `items-tags-update`, `responses-get`, `jobs-get`,
-`offlinepackage-get`, the two branched `sessions-set-*` submissions, and `sessions-delete`. Each was chosen to DISAGREE with what was already modelled, which
-is the only reason the traps below were found rather than assumed. The other 47 documented
+`offlinepackage-get`, the two branched `sessions-set-*` submissions, `sessions-delete`, and every `update` in the API. Each was chosen to DISAGREE with what was already modelled, which
+is the only reason the traps below were found rather than assumed. The other 39 documented
 blocks are in `spec/coverage.md` and are unbuilt, not unsupported; an operation absent from
 the vocabulary must never be guessed at.
 

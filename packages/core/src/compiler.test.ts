@@ -675,3 +675,57 @@ describe("sessions-delete — the only destructive operation", () => {
     expect(hasWarning(set, "scratch bank")).toBe(true);
   });
 });
+
+describe("the update action across the API", () => {
+  test("activity tags behave like item tags — measured, not assumed", async () => {
+    // Sandbox 386: seeded A,B; update with C gave A,B,C; set with D gave D alone.
+    const upd = await compile(`data-job activities-tags-update [ activities [{reference: "a", tags: [{type: "t", name: "n"}]}] {} ] {}..`);
+    const set = await compile(`data-job activities-tags-set [ activities [{reference: "a", tags: [{type: "t", name: "n"}]}] {} ] {}..`);
+    expect(upd.write_semantics).toBe("merge");
+    expect(set.write_semantics).toBe("replace");
+  });
+
+  test("every other update block leaves its semantics UNSTATED", async () => {
+    // Both measurements are tag assignments. Generalising from them is the mistake this
+    // API has punished repeatedly (C15, C16, C17), and here it would destroy data.
+    for (const src of [
+      `data-job pools-update [ pools [{reference: "p"}] {} ] {}..`,
+      `data-job session-statuses-update [ statuses [{session-id: "s", status: "Completed"}] {} ] {}..`,
+      `data-job session-item-update [ session-ids ["s"] target-item-reference "r" {} ] {}..`,
+      `data-job response-feedback-update [ session-id "s" items [{item-reference: "i"}] {} ] {}..`,
+      `data-job response-scores-update [ sessions [{session-id: "s"}] {} ] {}..`,
+      `data-job response-grading-update [ session-id "s" items [{item-reference: "i"}] {} ] {}..`,
+    ]) {
+      const out = await compile(src);
+      expect(out.write_semantics, src).toBeUndefined();
+      expect(hasWarning(out, "has NOT been established"), src).toBe(true);
+    }
+  });
+
+  test("an unknown-semantics write says why, not just that", async () => {
+    const out = await compile(`data-job pools-update [ pools [{reference: "p"}] {} ] {}..`);
+    expect(hasWarning(out, "they were both tag assignments")).toBe(true);
+    expect(hasWarning(out, "Rehearse against data you can afford to lose")).toBe(true);
+  });
+
+  test("`status` now means a third thing again, scoped to its block", async () => {
+    // Item statuses (published/…), job statuses (queued/…), and now SESSION statuses.
+    const ok = await compile(`data-job session-statuses-update [ statuses [{session-id: "s", status: "Discarded"}] {} ] {}..`);
+    expect(hasWarning(ok, "isn't one of")).toBe(false);
+    const bad = await compile(`data-job session-statuses-update [ statuses [{session-id: "s", status: "published"}] {} ] {}..`);
+    expect(hasWarning(bad, "isn't one of")).toBe(true);
+  });
+
+  test("nested target_item paths flatten as declared", async () => {
+    const out = await compile(`data-job session-item-update [
+      session-ids ["s"] target-item-reference "r" target-item-organisation-id 386 {} ] {}..`);
+    expect(out.paths["target-item-reference"]).toBe("target_item.reference");
+    expect(out.paths["target-item-organisation-id"]).toBe("target_item.organisation_id");
+  });
+
+  test("grading and feedback payloads are carried unmodelled, and say so", async () => {
+    const out = await compile(`data-job response-grading-update [
+      session-id "s" items [{item-reference: "i", responses: [{response_id: "r"}]}] {} ] {}..`);
+    expect(hasWarning(out, "passed through unchecked")).toBe(true);
+  });
+});

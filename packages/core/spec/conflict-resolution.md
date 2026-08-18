@@ -397,7 +397,18 @@ sandbox 386, seeding tags A and B:
 | `update` | C | **A, B, C** — merged |
 | `set` | D | **D** — replaced |
 
-**Resolution.** On this endpoint the verbs do differ as the names suggest. But that is a
+**Second measurement, 2026-08-18.** `itembank/activities/tags` — the sibling endpoint, same
+pattern, different resource — behaves identically: seeded A,B, `update` with C gave A,B,C, `set`
+with D gave D alone. Two endpoints now agree.
+
+**That is evidence about TAG ASSIGNMENT, not about `update`.** Both measured cases are tag
+endpoints with identical shapes; neither says anything about `itembank/pools` + `update`,
+`sessions/responses/scores` + `update`, or the four others. All six are modelled with their
+semantics left UNSET, and the compiler emits an explicit "not established for this operation"
+advisory rather than staying silent — silence would read as safety, and merge-vs-replace is the
+most dangerous unknown a write carries.
+
+**Resolution.** On these two endpoints the verbs do differ as the names suggest. But that is a
 *measurement about this endpoint*, not a rule: nothing in the reference states it, the parameters
 are identical, and the API has already shown (C15, C16, C17) that per-endpoint behaviour cannot be
 generalised from one sample. The other seven `update` blocks are **untested**.

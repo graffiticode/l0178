@@ -1,6 +1,6 @@
 {
   "id": "0178",
-  "status": "EARLY — 10 of 57 blocks modelled. Reads, writes and the async shape verified live; the two sessions submissions and the session delete are documented only, the delete deliberately so.",
+  "status": "EARLY — 18 of 57 blocks modelled, and every `update` operation in the API is now covered. Reads, writes and async verified live; the sessions submissions, the delete, and six of the eight updates are documented only — for those six, merge-vs-replace is explicitly NOT established.",
   "description": "Produces developer cookbook recipes for the Learnosity Data API — the server-to-server interface to a Learnosity Item bank. The client describes a data job (which operation, what the request carries, how far it reads) and L0178 validates it, flags holes as steering warnings, and via get_spec returns a host-language-neutral recipe: goal, preconditions, procedure, a dedicated paging section, gotchas, and verification steps. The failure it exists to prevent is a truncated read — measured against the live demo bank: meta.records read 2 on every one of 12 consecutive pages while 24 distinct Items came back, and a limit above the maximum is silently clamped so that every page looks short while meta.next is present throughout. Currently models reading Items from an Item bank; other operations are unbuilt, not unsupported. It does NOT author item content (that is L0176), does NOT cover the Author API authoring experience (that is L0177), and never calls a Learnosity API. Use ONLY when the user names Learnosity.",
   "supported_item_types": [
     "items-get",
@@ -12,7 +12,15 @@
     "offlinepackage-get",
     "sessions-set-from-template",
     "sessions-set-failed-submission",
-    "sessions-delete"
+    "sessions-delete",
+    "activities-tags-set",
+    "activities-tags-update",
+    "pools-update",
+    "session-statuses-update",
+    "session-item-update",
+    "response-feedback-update",
+    "response-scores-update",
+    "response-grading-update"
   ],
   "example_prompts": [
     {

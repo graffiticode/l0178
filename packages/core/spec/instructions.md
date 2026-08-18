@@ -62,8 +62,16 @@ language.
 | `sessions-set-from-template` | `sessions` | `set` | no | — | **yes** |
 | `sessions-set-failed-submission` | `sessions` | `set` | no | — | **yes** |
 | `sessions-delete` | `sessions` | `delete` | no | — | **yes** |
+| `activities-tags-set` | `itembank/activities/tags` | `set` | no | — | no |
+| `activities-tags-update` | `itembank/activities/tags` | `update` | no | — | no |
+| `pools-update` | `itembank/pools` | `update` | no | — | **yes** |
+| `session-statuses-update` | `jobs/sessions/statuses` | `update` | no | — | **yes** |
+| `session-item-update` | `sessions/item` | `update` | no | — | **yes** |
+| `response-feedback-update` | `sessions/responses/feedback` | `update` | no | — | no |
+| `response-scores-update` | `sessions/responses/scores` | `update` | no | — | **yes** |
+| `response-grading-update` | `sessions/responses/scores/grading` | `update` | no | — | no |
 
-Only these ten of the Data API's 57 operations are modelled. A request for any other —
+Only these eighteen of the Data API's 57 operations are modelled. A request for any other —
 writes, duplicates, `sessions/scores` — must be declined, not answered with the nearest
 built thing.
 
@@ -236,6 +244,34 @@ like it.
 It is asynchronous, so it returns a job reference rather than a result — and there is
 nothing to re-read afterwards to see what went. **Documented only**: exercising it destroys
 a session irreversibly.
+
+## The `update` operations
+
+Every `update` in the API is now modelled. Their request fields:
+
+| Block | Carries |
+| :---- | :------ |
+| `activities-tags-set` / `activities-tags-update` | `organisation-id`, `activities` (records: `reference`, `tags`), max 50 |
+| `pools-update` | `organisation-id`, `pools` (records: `reference`, `name`, `content`), max 50 |
+| `session-statuses-update` | `statuses` (records: `session-id`, `status`, `user-id`), max 100 |
+| `session-item-update` | `session-ids` (max 100), `target-item-reference`, `target-item-organisation-id`, `target-item-pool-id` |
+| `response-feedback-update` | `session-id`, `items` (records: `item-reference`, `responses`) |
+| `response-scores-update` | `sessions` (records: `session-id`, `user-id`, `responses`), max 1000 |
+| `response-grading-update` | `session-id`, `items` (records: `item-reference`, `responses`) |
+
+**Only the two tag operations have known merge-vs-replace behaviour.** `activities-tags-set`
+replaces the tag set and `activities-tags-update` merges into it, matching `items-tags-*` and
+measured the same way. For every other `update` here the behaviour is **not established**,
+and the compiler says so rather than letting the verb imply it — both measurements were tag
+assignments, and this API differs per endpoint often enough that generalising from two
+siblings would be a guess with data loss on the other side of it.
+
+Note `status` on `session-statuses-update` is a SESSION status — `Completed`, `Incomplete`,
+`Discarded`. That is a third meaning for the keyword, after Item statuses and job statuses.
+Each is scoped to its block.
+
+The deeper grading and feedback payloads (`responses` inside those records) carry scoring
+content rather than transport structure, so they pass through unchecked and say so.
 
 ## Polling an async operation
 

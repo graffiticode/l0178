@@ -351,6 +351,119 @@ export const BLOCKS: Record<string, Block> = {
     },
   },
 
+  // Activity tags, the sibling of items-tags-*. VERIFIED on sandbox 386: seeded A,B;
+  // `update` with C gave A,B,C; `set` with D gave D alone — the same split as items/tags.
+  // Two endpoints agreeing is evidence about the TAGS pattern, not about `update` in
+  // general; the blocks below leave their semantics unstated for that reason.
+  "activities-tags-set": {
+    endpoint: "itembank/activities/tags", action: "set",
+    paged: false, async: false, writes: true, writeSemantics: "replace",
+    primaryBankDefault: true, article: "26076378932765",
+    fields: {
+      "organisation-id": ["organisation_id", "number"],
+      "activities": ["activities", "records", { maxEntries: 50, required: ["reference"],
+        schema: { "reference": ["reference", "string"], "tags": ["tags", "tags"] } }],
+    },
+  },
+  "activities-tags-update": {
+    endpoint: "itembank/activities/tags", action: "update",
+    paged: false, async: false, writes: true, writeSemantics: "merge",
+    primaryBankDefault: true, article: "26076378932765",
+    fields: {
+      "organisation-id": ["organisation_id", "number"],
+      "activities": ["activities", "records", { maxEntries: 50, required: ["reference"],
+        schema: { "reference": ["reference", "string"], "tags": ["tags", "tags"] } }],
+    },
+  },
+
+  // The remaining `update` operations. NONE has its writeSemantics set, and that is the
+  // point: merge-vs-replace is measured per (endpoint, action), the two measurements so
+  // far are both tag-assignment endpoints, and guessing here destroys data. The compiler
+  // says so rather than staying silent.
+  "pools-update": {
+    endpoint: "itembank/pools", action: "update",
+    paged: false, async: true, asyncEnvelope: "array", writes: true,
+    primaryBankDefault: true, article: "26076363663005",
+    fields: {
+      "organisation-id": ["organisation_id", "number"],
+      "pools": ["pools", "records", { maxEntries: 50, required: ["reference"],
+        schema: {
+          "reference": ["reference", "string"],
+          "name": ["name", "string"],
+          // Pool content selection is a nested structure of its own; not modelled.
+          "content": ["content", "unmodeled"],
+        } }],
+    },
+  },
+  "session-statuses-update": {
+    endpoint: "jobs/sessions/statuses", action: "update",
+    paged: false, async: true, asyncEnvelope: "object", writes: true,
+    article: "26076335907869",
+    fields: {
+      "statuses": ["statuses", "records", { maxEntries: 100,
+        required: ["session_id", "status"],
+        schema: {
+          "session-id": ["session_id", "string"],
+          // Note: NOT the Item statuses, and not the job statuses either.
+          "status": ["status", "string", { values: ["Completed", "Incomplete", "Discarded"] }],
+          "user-id": ["user_id", "string"],
+        } }],
+    },
+  },
+  "session-item-update": {
+    endpoint: "sessions/item", action: "update",
+    paged: false, async: true, asyncEnvelope: "object", writes: true,
+    article: "26076318688925",
+    fields: {
+      "session-ids": ["session_ids", "strings", { maxEntries: 100 }],
+      "target-item-reference": ["target_item.reference", "string"],
+      "target-item-organisation-id": ["target_item.organisation_id", "number"],
+      "target-item-pool-id": ["target_item.item_pool_id", "string"],
+    },
+  },
+  "response-feedback-update": {
+    endpoint: "sessions/responses/feedback", action: "update",
+    paged: false, async: false, writes: true,
+    article: "27824043349661",
+    fields: {
+      "session-id": ["session_id", "string"],
+      // The per-response feedback payload nests grader entries; left unmodelled rather
+      // than invented, since it is grading content rather than transport structure.
+      "items": ["items", "records", { required: ["item_reference"],
+        schema: {
+          "item-reference": ["item_reference", "string"],
+          "responses": ["responses", "unmodeled"],
+        } }],
+    },
+  },
+  "response-scores-update": {
+    endpoint: "sessions/responses/scores", action: "update",
+    paged: false, async: true, asyncEnvelope: "object", writes: true,
+    article: "26076278639389",
+    fields: {
+      "sessions": ["sessions", "records", { maxEntries: 1000,
+        required: ["session_id"],
+        schema: {
+          "session-id": ["session_id", "string"],
+          "user-id": ["user_id", "string"],
+          "responses": ["responses", "unmodeled"],
+        } }],
+    },
+  },
+  "response-grading-update": {
+    endpoint: "sessions/responses/scores/grading", action: "update",
+    paged: false, async: false, writes: true,
+    article: "37621876726813",
+    fields: {
+      "session-id": ["session_id", "string"],
+      "items": ["items", "records", { required: ["item_reference"],
+        schema: {
+          "item-reference": ["item_reference", "string"],
+          "responses": ["responses", "unmodeled"],
+        } }],
+    },
+  },
+
   // The only `delete` in the API, and the only block capped at ONE entry — every other
   // batch allows 50. That cap is deliberate: Learnosity scopes this endpoint to
   // right-to-be-forgotten requests and small deletions, and directs bulk cleanup to

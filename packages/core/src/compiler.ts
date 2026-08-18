@@ -259,6 +259,11 @@ function finalize(rec: any, options: any): any {
       // into it, and the reference documents identical parameters for both.
       if (block.writeSemantics === "replace") {
         specificity.push(`\`${block.action}\` on this endpoint REPLACES what is there — anything you do not send is cleared, not kept. To change one thing without losing the rest, send the whole picture, or use an operation on this endpoint that merges if one exists.`);
+      } else if (block.writeSemantics === undefined) {
+        // Silence would be worse than a hedge here. Merge-vs-replace is the most
+        // dangerous unknown a write carries, and the two operations measured so far are
+        // both tag-assignment endpoints — not enough to generalise from.
+        specificity.push("Whether this REPLACES what is there or MERGES into it has NOT been established for this operation. Two endpoints were measured and both replace under `set` and merge under `update`, but they were both tag assignments, and this API has repeatedly turned out to differ per endpoint. Rehearse against data you can afford to lose and observe which it does before trusting it.");
       } else if (block.writeSemantics === "merge") {
         specificity.push(`\`${block.action}\` on this endpoint MERGES into what is there, so this adds without clearing. That is measured for this operation and does not generalise — the same endpoint's \`set\` replaces.`);
       }
