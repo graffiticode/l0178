@@ -57,8 +57,10 @@ language.
 | `jobs-get` | `jobs` | `get` | no | — | no |
 | `offlinepackage-get` | `itembank/offlinepackage` | `get` | no | — | **yes** |
 | `items-set` | `itembank/items` | `set` | no | — | no |
+| `items-tags-set` | `itembank/items/tags` | `set` | no | — | no |
+| `items-tags-update` | `itembank/items/tags` | `update` | no | — | no |
 
-Only these five of the Data API's 57 operations are modelled. A request for any other —
+Only these seven of the Data API's 57 operations are modelled. A request for any other —
 writes, duplicates, `sessions/scores` — must be declined, not answered with the nearest
 built thing.
 
@@ -172,6 +174,29 @@ Three things to carry into any request that uses this block:
   request wants the Item usable, it must say `status: "published"`.
 - **`definition` is required and carries item CONTENT**, which this dialect does not model.
   It is passed through unchecked. Content is composed in L0176; this dialect moves it.
+
+## Tagging Items — `items-tags-set` and `items-tags-update`
+
+| Field | Learnosity path | Type |
+| :---- | :-------------- | :--- |
+| `organisation-id` | `organisation_id` | number |
+| `items` | `items` | list of records, max 50; each needs `reference`, and carries `tags` |
+| `meta-user-id` | `meta.user.id` | string — recorded in the audit trail |
+| `meta-user-firstname` / `meta-user-lastname` / `meta-user-email` | `meta.user.*` | string |
+
+**The same endpoint behaves differently under each verb, and this is the reason the registry
+is keyed on the pair:**
+
+- **`items-tags-set` REPLACES** the Item's tag set. Tags not sent are removed.
+- **`items-tags-update` MERGES** into it. Existing tags are kept and the sent ones added.
+
+Choose from what the request asks for: "add a tag" is `update`; "these are now its tags" is
+`set`. Getting it backwards silently deletes tags, and the reference documents identical
+parameters for both actions without saying which is which.
+
+Note tags are WRITTEN as a list of TagsV2 records `[{type, name}]` but come back on a read
+as an object keyed by type — `{"probe": ["A", "B"]}`. The write shape is what this dialect
+expresses.
 
 ## Polling an async operation
 

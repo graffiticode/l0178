@@ -1,10 +1,12 @@
 {
   "id": "0178",
-  "status": "EARLY — 5 of 57 blocks modelled, all verified live. Reads on the public demo bank; the async and write blocks on a private consumer, sandbox bank 386.",
+  "status": "EARLY — 7 of 57 blocks modelled, all verified live. Reads on the public demo bank; writes and async on a private consumer, sandbox bank 386.",
   "description": "Produces developer cookbook recipes for the Learnosity Data API — the server-to-server interface to a Learnosity Item bank. The client describes a data job (which operation, what the request carries, how far it reads) and L0178 validates it, flags holes as steering warnings, and via get_spec returns a host-language-neutral recipe: goal, preconditions, procedure, a dedicated paging section, gotchas, and verification steps. The failure it exists to prevent is a truncated read — measured against the live demo bank: meta.records read 2 on every one of 12 consecutive pages while 24 distinct Items came back, and a limit above the maximum is silently clamped so that every page looks short while meta.next is present throughout. Currently models reading Items from an Item bank; other operations are unbuilt, not unsupported. It does NOT author item content (that is L0176), does NOT cover the Author API authoring experience (that is L0177), and never calls a Learnosity API. Use ONLY when the user names Learnosity.",
   "supported_item_types": [
     "items-get",
     "items-set",
+    "items-tags-set",
+    "items-tags-update",
     "responses-get",
     "jobs-get",
     "offlinepackage-get"
@@ -49,6 +51,11 @@
       "prompt": "Publish these three items into bank 386, replacing what is there.",
       "produces": "items-set",
       "notes": "A write. The recipe must lead with replace semantics — omitted fields are cleared, not preserved — and say that status defaults to unpublished, which makes the item undeliverable."
+    },
+    {
+      "prompt": "Add the tag Grade: 9 to item bio-cell-4 in bank 386 without touching its other tags.",
+      "produces": "items-tags-update",
+      "notes": "The merge case. Written as items-tags-set instead, this would silently delete every other tag on the item — same endpoint, different verb, identical documented parameters."
     }
   ]
 }

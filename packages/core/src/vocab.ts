@@ -81,6 +81,12 @@ export type Block = {
   // not work everywhere — `data.job_reference` is undefined on the array endpoints — and
   // the shape has to travel with the block, like pagingEnd does.
   asyncEnvelope?: "array" | "object";
+  // How a write treats what is already there. VERIFIED to differ BY ACTION on one and the
+  // same endpoint: `itembank/items/tags` + `set` replaces the Item's tag set, while
+  // + `update` merges into it. The reference documents identical parameters for both and
+  // never says which is which, so the verb is the only signal and it is not a reliable one
+  // (`itembank/items` + `set` also replaces, but nothing says `set` always means replace).
+  writeSemantics?: "merge" | "replace";
   // True when the operation PERSISTS. Drives the write-safety warnings, and is not the
   // same as `action !== "get"` — some `get` operations start jobs that mutate.
   writes?: boolean;
@@ -257,6 +263,7 @@ export const BLOCKS: Record<string, Block> = {
     paged: false,
     async: false,
     writes: true,
+    writeSemantics: "replace",
     primaryBankDefault: true,
     article: "26076386828189",
     fields: {
@@ -300,6 +307,63 @@ export const BLOCKS: Record<string, Block> = {
           "workflow": ["workflow", "unmodeled"],
         },
       }],
+    },
+  },
+
+  // The same endpoint under two verbs, and they behave DIFFERENTLY — which is the sharpest
+  // demonstration of why the registry key is (endpoint, action). Measured on sandbox 386:
+  // seeded tags A,B; `update` with C gave A,B,C; `set` with D gave D alone.
+  "items-tags-set": {
+    endpoint: "itembank/items/tags",
+    action: "set",
+    paged: false,
+    async: false,
+    writes: true,
+    writeSemantics: "replace",
+    primaryBankDefault: true,
+    article: "26076399449757",
+    fields: {
+      "organisation-id": ["organisation_id", "number"],
+      "items": ["items", "records", {
+        maxEntries: 50,
+        required: ["reference"],
+        schema: {
+          "reference": ["reference", "string"],
+          "tags": ["tags", "tags"],
+        },
+      }],
+      // Recorded in the audit trail and shown in the Learnosity Author Site history.
+      "meta-user-id": ["meta.user.id", "string"],
+      "meta-user-firstname": ["meta.user.firstname", "string"],
+      "meta-user-lastname": ["meta.user.lastname", "string"],
+      "meta-user-email": ["meta.user.email", "string"],
+    },
+  },
+
+  "items-tags-update": {
+    endpoint: "itembank/items/tags",
+    action: "update",
+    paged: false,
+    async: false,
+    writes: true,
+    writeSemantics: "merge",
+    primaryBankDefault: true,
+    article: "26076399449757",
+    fields: {
+      "organisation-id": ["organisation_id", "number"],
+      "items": ["items", "records", {
+        maxEntries: 50,
+        required: ["reference"],
+        schema: {
+          "reference": ["reference", "string"],
+          "tags": ["tags", "tags"],
+        },
+      }],
+      // Recorded in the audit trail and shown in the Learnosity Author Site history.
+      "meta-user-id": ["meta.user.id", "string"],
+      "meta-user-firstname": ["meta.user.firstname", "string"],
+      "meta-user-lastname": ["meta.user.lastname", "string"],
+      "meta-user-email": ["meta.user.email", "string"],
     },
   },
 };

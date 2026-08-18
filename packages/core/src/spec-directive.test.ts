@@ -90,6 +90,20 @@ describe("the directive gives writes their own section", () => {
     expect(has(directive, "Never fold it into the Procedure")).toBe(true);
   });
 
+  test("semantics come from write_semantics, never inferred from the verb", () => {
+    // The same endpoint replaces under `set` and merges under `update`, documented
+    // identically. Seven other update blocks are untested, so "update merges" is a rule
+    // the recipe would be inventing.
+    expect(has(directive, "Read write_semantics from the compiled output")).toBe(true);
+    expect(has(directive, "never infer it from the verb")).toBe(true);
+    expect(has(directive, "is inventing a rule")).toBe(true);
+    expect(has(register, "C19")).toBe(true);
+  });
+
+  test("a merging write says it does not generalise", () => {
+    expect(has(directive, "say it does not generalise")).toBe(true);
+  });
+
   test("it leads with REPLACE semantics and names the loop that loses data", () => {
     // The single worst write hazard: read-modify-write silently clears every field not
     // resent, and the response cannot warn you because it echoes nothing.

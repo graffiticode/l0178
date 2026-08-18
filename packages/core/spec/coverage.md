@@ -17,7 +17,7 @@ envelope carries a `meta.versions` object. Both are in `instructions.md` marked 
 un-written tricks that make this dialect worth having are, by definition, absent from the
 documentation — this map tells you where to go looking, never what you will find there.
 
-**Coverage against this denominator: 5 of 57 blocks built**, all verified live:
+**Coverage against this denominator: 7 of 57 blocks built**, all verified live:
 
 | Block | Shape | Verified against |
 | :-- | :-- | :-- |
@@ -26,12 +26,16 @@ documentation — this map tells you where to go looking, never what you will fi
 | `jobs` + `get` | not paged; the async polling channel | private consumer, sandbox 386 |
 | `itembank/offlinepackage` + `get` | **async** — returns a job reference | private consumer, sandbox 386 |
 | `itembank/items` + `set` | **writes**; replaces rather than merges | private consumer, sandbox 386 |
+| `itembank/items/tags` + `set` | **writes**; REPLACES the tag set | private consumer, sandbox 386 |
+| `itembank/items/tags` + `update` | **writes**; MERGES into the tag set | private consumer, sandbox 386 |
 
 Each was chosen to DISAGREE with what was already modelled, and each disagreement paid: the two
 paged blocks end their loops by opposite rules (C15); the documented `status` default on `jobs`
 turned out not to exist, so following the reference breaks a polling loop (C16); `set`
 replaces rather than merges, which the reference never states (C18); and the async envelope
-genuinely differs per endpoint rather than one form being a doc error (C17). The register
+genuinely differs per endpoint rather than one form being a doc error (C17); and one endpoint
+replaces under `set` while merging under `update`, documented identically, so the verb predicts
+nothing (C19). The register
 now stands at 18 entries with none open — the last, C5, closed on a measurement showing the
 API answers plain HTTP with a 301 rather than the documented 403 (C5).
 

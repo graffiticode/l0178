@@ -37,9 +37,10 @@ job* (which endpoint, which action, what the request carries); L0178 validates i
 holes as steering warnings, and — via `get_spec` — returns a host-language-neutral developer
 recipe covering signing, paging, the response envelope, and verification.
 
-**Status: early.** Five operations are modelled — `items-get`, `items-set`,
-`responses-get`, `jobs-get` and `offlinepackage-get`. Each was chosen to DISAGREE with what was already modelled, which
-is the only reason the traps below were found rather than assumed. The other 52 documented
+**Status: early.** Seven operations are modelled — `items-get`, `items-set`,
+`items-tags-set`, `items-tags-update`, `responses-get`, `jobs-get` and
+`offlinepackage-get`. Each was chosen to DISAGREE with what was already modelled, which
+is the only reason the traps below were found rather than assumed. The other 50 documented
 blocks are in `spec/coverage.md` and are unbuilt, not unsupported; an operation absent from
 the vocabulary must never be guessed at.
 
@@ -91,6 +92,11 @@ saying what exercised it.
   its `description` and `note`. The read-modify-write a developer reaches for destroys
   every field not resent, `meta.status` is `true` throughout, and the response is `data: []`
   so nothing can be compared. This is the worst hazard in the API so far. See C18.
+- **The VERB does not predict merge-vs-replace.** `itembank/items/tags` offers both `set`
+  and `update` with identical documented parameters: `set` REPLACES the tag set, `update`
+  MERGES into it. Measured; nothing in the reference says so. The other seven `update`
+  blocks are untested, so it is modelled per (endpoint, action) as `writeSemantics` and
+  never inferred. C19.
 - **`status` defaults to `unpublished` on write**, and an unpublished Item cannot be
   delivered. The write succeeds; delivery is just empty.
 - **`definition` is required and must hold ≥1 widget** (codes 20000 / 20001), so an Item

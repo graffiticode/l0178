@@ -524,3 +524,40 @@ describe("items-set — the first write", () => {
     expect(hasWarning(out, "exceeds the documented maximum of 50")).toBe(true);
   });
 });
+
+describe("write semantics differ BY ACTION on one endpoint", () => {
+  const TAGS = `items [{reference: "r", tags: [{type: "probe", name: "A"}]}]`;
+
+  test("the same endpoint replaces under `set` and merges under `update`", async () => {
+    // Measured on sandbox 386: seeded A,B; `update` with C gave A,B,C; `set` with D gave D
+    // alone. The reference documents IDENTICAL parameters for both actions and never says
+    // which is which — so this is the sharpest case for keying the registry on the pair.
+    const set = await compile(`data-job items-tags-set [ organisation-id 386 ${TAGS} {} ] {}..`);
+    const upd = await compile(`data-job items-tags-update [ organisation-id 386 ${TAGS} {} ] {}..`);
+    expect(set.endpoint).toBe("itembank/items/tags");
+    expect(upd.endpoint).toBe("itembank/items/tags");
+    expect(set.write_semantics).toBe("replace");
+    expect(upd.write_semantics).toBe("merge");
+  });
+
+  test("each states its own semantics, and the merge case says it does not generalise", async () => {
+    const set = await compile(`data-job items-tags-set [ organisation-id 386 ${TAGS} {} ] {}..`);
+    const upd = await compile(`data-job items-tags-update [ organisation-id 386 ${TAGS} {} ] {}..`);
+    expect(hasWarning(set, "REPLACES what is there")).toBe(true);
+    expect(hasWarning(upd, "MERGES into what is there")).toBe(true);
+    expect(hasWarning(upd, "does not generalise")).toBe(true);
+    // A merging write is still a write.
+    expect(hasWarning(upd, "This job WRITES")).toBe(true);
+  });
+
+  test("`set` on itembank/items also replaces — but the verb is not what says so", async () => {
+    const out = await compile(`data-job items-set [ items [{reference: "r", definition: {widgets: []}, status: "published"}] {} ] {}..`);
+    expect(out.write_semantics).toBe("replace");
+  });
+
+  test("a read block carries no write semantics", async () => {
+    const out = await compile(`data-job paging EXHAUSTIVE items-get [ references ["a"] {} ] {}..`);
+    expect(out.writes).toBeUndefined();
+    expect(out.write_semantics).toBeUndefined();
+  });
+});

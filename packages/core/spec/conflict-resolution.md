@@ -44,6 +44,7 @@ reader can overturn it with better evidence instead of re-litigating it from scr
 | C16 | `jobs` + `get` `status` default | RESOLVED — measured, docs WRONG |
 | C17 | Shape of the async `data` envelope | RESOLVED — measured; genuinely differs |
 | C18 | Whether `set` merges or replaces | RESOLVED — measured; docs silent |
+| C19 | Whether the VERB predicts merge-vs-replace | RESOLVED — measured; it does not |
 
 ---
 
@@ -365,12 +366,44 @@ requirement that an Item be published to be delivered. It is recorded as a trap 
 contradiction — the two facts are simply far apart in the reference, and their combination is
 what bites.
 
+### C19 — Whether the verb predicts merge-vs-replace · RESOLVED (measured; it does not)
+
+C18 established that `itembank/items` + `set` replaces. The natural generalisation — and the one
+a reader will make — is that `set` means replace and `update` means merge, across the API.
+
+`itembank/items/tags` is the ideal test: it offers **both** actions, and the reference documents
+**identical request parameters for each** without a word about how they differ. Measured on
+sandbox 386, seeding tags A and B:
+
+| Action | Sent | Result |
+| :-- | :-- | :-- |
+| `update` | C | **A, B, C** — merged |
+| `set` | D | **D** — replaced |
+
+**Resolution.** On this endpoint the verbs do differ as the names suggest. But that is a
+*measurement about this endpoint*, not a rule: nothing in the reference states it, the parameters
+are identical, and the API has already shown (C15, C16, C17) that per-endpoint behaviour cannot be
+generalised from one sample. The other seven `update` blocks are **untested**.
+
+**So the fact is modelled per (endpoint, action) as `writeSemantics`,** surfaced as
+`write_semantics` in the output — the same treatment as `pagingEnd` and `asyncEnvelope`, and for
+the same reason. The merge advisory says explicitly that it does not generalise.
+
+**Why it matters.** "Add a tag" written as `set` silently deletes every other tag on the Item, and
+the response echoes nothing. This is C18's hazard reachable through a different door.
+
+**Related, measured while testing:** an invalid value in `include` is REJECTED (`meta.status`
+false, code 20004), not silently ignored — the one place so far where this API fails loudly rather
+than plausibly. Worth knowing because an empty-looking read is then a FAILED request, not a filter
+that matched nothing. This register's own author misread exactly that during the probe by not
+checking `meta.status` — the rule the dialect exists to teach.
+
 ---
 
 ## Caveat on "measured"
 
 Measurements come from two consumers, and each entry says which. C1–C15 were taken against
-**Learnosity's public demo Item bank** on 2026-08-13; C16–C18 against a **private consumer on
+**Learnosity's public demo Item bank** on 2026-08-13; C16–C19 against a **private consumer on
 sandbox Item bank 386** on 2026-08-17 (C17 closed there the same day). Both used `learnosity-sdk-nodejs` 0.7.0 against
 `v2025.2.LTS` (concrete `v1.79.5`).
 

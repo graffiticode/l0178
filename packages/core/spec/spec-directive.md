@@ -55,8 +55,10 @@ Three details are binary and must be stated exactly:
 ## Write safety
 **A required section whenever the compiled output has `writes: true`. Never fold it into the Procedure — a reader who skims past it loses data.**
 
-- **Lead with the fact that `set` REPLACES.** A field omitted from the payload is CLEARED, not left alone. State plainly that the natural read-modify-write — fetch the Item, change one field, send that field back — destroys every field not resent, and that the request succeeds while doing it. Tell the reader to send the Item whole.
+- **Read `write_semantics` from the compiled output and state it — never infer it from the verb.** Measured: on `itembank/items/tags` the SAME endpoint replaces under `set` and merges under `update`, with identical documented parameters and no word in the reference about the difference. The seven other `update` blocks are untested, so a recipe that says "update always merges" is inventing a rule.
+- **Lead with the fact that a REPLACING write REPLACES.** A field omitted from the payload is CLEARED, not left alone. State plainly that the natural read-modify-write — fetch the Item, change one field, send that field back — destroys every field not resent, and that the request succeeds while doing it. Tell the reader to send the Item whole.
 - **Say the response proves nothing.** A successful write returns `data: []`; it does not echo what landed. Confirmation is a re-read, and the verification checklist must contain one.
+- **When the operation MERGES, say so plainly and say it does not generalise** — the reader's next write may be on an endpoint that replaces.
 - **Say what `status` does when omitted** — it becomes `unpublished`, and an unpublished Item cannot be delivered. If the job intends the Item to be usable, `status: "published"` has to be explicit.
 - **Direct every first run at a scratch bank**, never the bank that holds real content, and say so before the procedure rather than after it.
 - If the design sets `new-reference`, say it RENAMES and that anything referring to the old reference stops resolving.

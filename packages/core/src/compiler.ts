@@ -242,6 +242,14 @@ function finalize(rec: any, options: any): any {
     // surfaces later — so these are advisories on a job that is otherwise correct.
     if (block.writes) {
       specificity.push(`This job WRITES. ${block.endpoint} + ${block.action} persists to the Item bank, and the response does not echo what was written — re-read to confirm. Point it at a scratch bank until you have seen it do the right thing.`);
+      // Which of the two semantics applies is measured per (endpoint, action), not implied
+      // by the verb: on itembank/items/tags, `set` replaces the tag set and `update` merges
+      // into it, and the reference documents identical parameters for both.
+      if (block.writeSemantics === "replace") {
+        specificity.push(`\`${block.action}\` on this endpoint REPLACES what is there — anything you do not send is cleared, not kept. To change one thing without losing the rest, send the whole picture, or use an operation on this endpoint that merges if one exists.`);
+      } else if (block.writeSemantics === "merge") {
+        specificity.push(`\`${block.action}\` on this endpoint MERGES into what is there, so this adds without clearing. That is measured for this operation and does not generalise — the same endpoint's \`set\` replaces.`);
+      }
       const entries = Array.isArray(request.items) ? request.items : [];
       if (entries.some((e: any) => e && e.status === undefined)) {
         specificity.push("An Item written without `status` defaults to `unpublished`, and an unpublished Item cannot be used in an assessment. The write succeeds either way, so nothing tells you until delivery is empty — set `status` explicitly.");
@@ -263,6 +271,9 @@ function finalize(rec: any, options: any): any {
   return {
     endpoint: block?.endpoint,
     action: block?.action,
+    writes: block?.writes,
+    // merge | replace, measured per (endpoint, action). Never inferred from the verb.
+    write_semantics: block?.writeSemantics,
     paged: block?.paged,
     // Which end-of-data signal this endpoint uses. The recipe branches on it; there is
     // no correct universal loop. See vocab.ts PagingEnd.
