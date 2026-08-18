@@ -476,3 +476,53 @@ describe("instructions.md shows the form of enumerated values", () => {
     expect(offenders).toEqual([]);
   });
 });
+
+/**
+ * examples.md is the RAG corpus source: its prompts are run through the generator and the
+ * PROGRAMS they yield are the corpus. So a block with no prompt contributes nothing to
+ * training, and the corpus quietly teaches a fraction of the vocabulary.
+ *
+ * That is exactly what happened — the tag blocks, the sessions submissions and all eight
+ * updates landed while examples.md was updated only for the delete, leaving 6 of 18 blocks
+ * represented. Nothing caught it because nothing was looking. This looks.
+ */
+describe("spec.md indexes every block", () => {
+  const spec = readFileSync(
+    fileURLToPath(new URL("../spec/spec.md", import.meta.url)), "utf-8",
+  );
+
+  test("every block appears in the index", () => {
+    // spec.md is the served vocabulary spec (spec-md renders it to spec.html). It fell to
+    // 5 of 18 while blocks were being added, because nothing checked.
+    expect(Object.keys(BLOCKS).filter((b) => !spec.includes(b))).toEqual([]);
+  });
+
+  test("it does not duplicate the per-block field tables", () => {
+    // Field detail lives in instructions.md only. Two statements of one fact age
+    // independently, and a stale copy of a long table would be believed.
+    expect(spec).toContain("documented per block in `instructions.md`, not here");
+  });
+});
+
+describe("examples.md covers the whole vocabulary", () => {
+  const examples = readFileSync(
+    fileURLToPath(new URL("../spec/examples.md", import.meta.url)), "utf-8",
+  );
+
+  test("every block is named in the corpus", () => {
+    const missing = Object.keys(BLOCKS).filter((b) => !examples.includes(b));
+    expect(missing).toEqual([]);
+  });
+
+  test("the header does not claim a block count it cannot back", () => {
+    // "all N blocks" in the preamble goes stale silently; tie it to the registry.
+    const m = examples.match(/all (\w+) blocks/);
+    expect(m, "examples.md should say how much surface it covers").toBeTruthy();
+    const words: Record<string, number> = {
+      two: 2, three: 3, four: 4, five: 5, six: 6, seven: 7, eight: 8, nine: 9, ten: 10,
+      eleven: 11, twelve: 12, thirteen: 13, fourteen: 14, fifteen: 15, sixteen: 16,
+      seventeen: 17, eighteen: 18, nineteen: 19, twenty: 20,
+    };
+    expect(words[m![1]] ?? Number(m![1])).toBe(Object.keys(BLOCKS).length);
+  });
+});

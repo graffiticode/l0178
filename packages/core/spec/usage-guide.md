@@ -47,7 +47,8 @@ data-job
 - **A block is one `(endpoint, action)` pair.** `items-get` is `itembank/items` + `get`.
   One keyword per pair, because a field's legality depends on the pair rather than on the
   endpoint alone — and because bare `get` and `set` belong to the base language.
-  Four are modelled: `items-get`, `responses-get`, `jobs-get` and `offlinepackage-get`.
+  Eighteen are modelled, spanning every shape the API has — see `spec.md` for the index
+  and `instructions.md` for each one's request fields.
 - **`offlinepackage-get` is asynchronous** — it returns a job reference rather than a
   result, and is redeemed by polling `jobs-get`. Neither of those two is paged, so neither
   takes a paging policy. Note it is an async `get`: the action verb says nothing about what
@@ -77,9 +78,10 @@ data-job
 - Embedding the Author API authoring experience → L0177.
 - Assessment delivery (Items API), analytics (Reports API) → separate sibling dialects,
   neither of which exists. Say no dialect covers it rather than stretching this one.
-- Data API operations not yet modelled — writes, the async job family, and the sessions
-  and reports endpoints. `spec/coverage.md` lists the whole surface; an operation absent
-  from the vocabulary is unbuilt, not unsupported, and must not be guessed at.
+- Data API operations not yet modelled — 39 of the 57, mostly reads and `set`s in the
+  `itembank/*`, `sessions/*` and `reports/*` families. `spec/coverage.md` lists the whole
+  surface; an operation absent from the vocabulary is unbuilt, not unsupported, and must
+  not be guessed at.
 - Calling the Learnosity API. L0178 holds no credentials and sends no requests.
 - Runnable host-language code — the recipe is a language-neutral procedure you implement
   yourself.

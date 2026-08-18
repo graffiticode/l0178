@@ -6,7 +6,7 @@ the generator to produce examples organically; the programs they yield are the c
 
 They are phrased the way a developer actually asks — data they need out of a Learnosity bank, and
 what they intend to do about it — not as descriptions of the vocabulary. Between them they should
-reach every part of the modelled surface: all ten blocks, every filter, the three session time axes,
+reach every part of the modelled surface: all eighteen blocks, every filter, the three session time axes,
 response shaping, both paging policies, and the asynchronous job shape.
 
 **Every prompt here must yield a program worth RETRIEVING.** A RAG row is a bare prompt-and-code
@@ -100,15 +100,51 @@ a prompt that asks to clear many is not, and lives in `boundary-tests.md`.
 42. Delete session 88336e4c-04de-4274-ae31-39957b230f98 — we have a right-to-be-forgotten request.
 43. Remove the session data for 3f9a1c22-77bd-4e10-9a01-5c2e8b41d7e0 at the learner's request.
 
+## Tagging — `items-tags-set`, `items-tags-update`, `activities-tags-set`, `activities-tags-update`
+
+The verb decides whether existing tags survive, so the request has to say which it wants. "Add"
+is `update`; "these are now its tags" is `set`.
+
+44. Add the tag Grade: 9 to item bio-cell-4 in bank 386, leaving its other tags alone.
+45. Tag items alg-quad-3 and calc-limit-2 with Subject: Maths, keeping whatever they already have.
+46. Replace all the tags on item rdg-passage-9 with just Status: retired.
+47. Set the tags on activity unit-3-quiz to Subject: English and Grade: 7, discarding the old ones.
+48. Add Term: Spring to activity unit-3-quiz without disturbing its existing tags.
+49. Retag these five items in bank 386 so their only tag is Review: pending.
+
+## Updating sessions, scores and pools — `session-statuses-update`, `session-item-update`,
+`response-scores-update`, `response-grading-update`, `response-feedback-update`, `pools-update`
+
+Each of these writes to assessment results. Whether they replace or merge is not established,
+so a request should say what it expects to happen.
+
+50. Mark session 7939ead7-3242-4907-850d-3e5e48130277 as Completed for user student_0001.
+51. Discard sessions 88336e4c-04de-4274-ae31-39957b230f98 and 3f9a1c22-77bd-4e10-9a01-5c2e8b41d7e0.
+52. Swap item calc-limit-2 into these three sessions and re-score them.
+53. Set the score on response r-4471 in session ef4f80b8-e281-41f4-9efd-349b7eb9dd37 to 3 out of 5.
+54. Record grader g-12's score of 4 for response r-889 on item bio-cell-4 in that session.
+55. Attach grader feedback to response r-889 in session ef4f80b8 saying the working was incomplete.
+56. Update the pool winter-2026 in bank 386 to be named Winter 2026 Review.
+
+## Submitting sessions — `sessions-set-from-template`, `sessions-set-failed-submission`
+
+Two different operations behind one endpoint. The payload the request describes decides which:
+learner responses against a template, or recovered base64 session data.
+
+57. Create sessions for these four learners against the template for activity numeracy.
+58. Submit the responses student_0001 gave to activity numeracy, built from our stored template.
+59. Re-submit these three sessions that failed to save because the learners lost connectivity.
+60. Push the recovered session blobs from yesterday's outage back into Learnosity, ignoring response revisions.
+
 ## Requests that raise an advisory warning
 
 Legitimate jobs the compiler accepts but wants to steer. The programs they yield are correct and
 worth retrieving; the warning is advisory and rides alongside, not a defect in the code.
 
-44. Get every Item that is NOT tagged Grade: 5 from bank 88.
-45. Fetch all Items whose workflow state is Approved.
-46. Read all the Items in the bank — no filter, just everything we have.
-47. Pull all the published Items — I don't know our bank id, just use the default one.
+61. Get every Item that is NOT tagged Grade: 5 from bank 88.
+62. Fetch all Items whose workflow state is Approved.
+63. Read all the Items in the bank — no filter, just everything we have.
+64. Pull all the published Items — I don't know our bank id, just use the default one.
 
 ## Under-specified requests (the compiler should flag the holes)
 
@@ -116,8 +152,8 @@ These withhold the reading intent on purpose — they are the counterpart to eve
 the programs they yield should carry holes, not an invented paging policy. Do not "fix" them by
 choosing exhaustive.
 
-48. Get the published Items from bank 123.
-49. I need the session responses for activity numeracy.
-50. Fetch Items tagged Subject: Science.
-51. Read the responses for user student_0001.
+65. Get the published Items from bank 123.
+66. I need the session responses for activity numeracy.
+67. Fetch Items tagged Subject: Science.
+68. Read the responses for user student_0001.
 
