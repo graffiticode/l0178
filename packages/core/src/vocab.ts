@@ -5,8 +5,10 @@
 // terminate with `{}`. A BLOCK is arity-2 and takes a `[list]` holding one property
 // chain. The head is arity-1.
 //
-// The registry key is the (endpoint, action) PAIR, and each pair gets ONE keyword —
-// `items-get` is `itembank/items` + `get`. Modelling the pair as a single keyword
+// A keyword names one OPERATION. That is usually the (endpoint, action) PAIR —
+// `items-get` is `itembank/items` + `get` — but where the API branches on a field VALUE
+// it is (endpoint, action, discriminant): `sessions` + `set` is two operations selected
+// by `data_format`, and they get a keyword each. See DISCRIMINATED OPERATIONS below. Modelling the pair as a single keyword
 // rather than as two properties is what makes the scoping work: a field's legality
 // depends on the pair, not on the endpoint alone (`itembank/items` under `get` takes
 // `references`/`limit`/`next`; under `set` it takes an `items` array of definitions —
@@ -87,6 +89,10 @@ export type Block = {
   // never says which is which, so the verb is the only signal and it is not a reliable one
   // (`itembank/items` + `set` also replaces, but nothing says `set` always means replace).
   writeSemantics?: "merge" | "replace";
+  // Values this operation always sends, whatever the author writes — the discriminant of
+  // a branched operation. Emitted into the request with their paths recorded, so the
+  // author cannot omit one or contradict the payload it selects.
+  fixed?: Record<string, [string, unknown]>;
   // True when the operation PERSISTS. Drives the write-safety warnings, and is not the
   // same as `action !== "get"` — some `get` operations start jobs that mutate.
   writes?: boolean;
@@ -337,6 +343,66 @@ export const BLOCKS: Record<string, Block> = {
       "meta-user-firstname": ["meta.user.firstname", "string"],
       "meta-user-lastname": ["meta.user.lastname", "string"],
       "meta-user-email": ["meta.user.email", "string"],
+    },
+  },
+
+  // DISCRIMINATED OPERATIONS. `sessions` + `set` is documented twice, and the two
+  // documents describe genuinely different operations selected by `data_format` (C3).
+  // They get a keyword each rather than one keyword plus variant machinery, for three
+  // reasons:
+  //   - `data` is `array[object]` in one and `array[string]` in the other. A single
+  //     `data` keyword meaning two different types is exactly the hazard the per-block
+  //     field scoping exists to prevent.
+  //   - variant machinery would sit in every block's validation path to serve ONE
+  //     documented case — the same objection that kept a third registry axis out (C3).
+  //   - the discriminant becomes unmissable and uncontradictable: the block chooses it,
+  //     `fixed` emits it, and the author cannot omit it or mismatch it to the payload.
+  // Both are UNVERIFIED — they write sessions, and there was no cheap way to exercise
+  // one without manufacturing session data. Fields and envelope are documented only.
+  "sessions-set-from-template": {
+    endpoint: "sessions",
+    action: "set",
+    paged: false,
+    async: true,
+    // [documented] — the sessions article shows the object form. NOT measured; the two
+    // endpoints that were measured disagree with each other, so this is a real claim
+    // rather than a safe default.
+    asyncEnvelope: "object",
+    writes: true,
+    article: "26076278679069",
+    fixed: { "data-format": ["data_format", "from_template"] },
+    fields: {
+      "sessions-data": ["data", "records", {
+        maxEntries: 50,
+        required: ["activity_id"],
+        schema: {
+          "user-id": ["user_id", "string"],
+          "activity-id": ["activity_id", "string"],
+          "session-id": ["session_id", "string"],
+          // Response objects vary by question type; only question_id is common across
+          // all of them, so the shape is content and passes through unchecked.
+          "responses": ["responses", "unmodeled"],
+        },
+      }],
+    },
+  },
+
+  "sessions-set-failed-submission": {
+    endpoint: "sessions",
+    action: "set",
+    paged: false,
+    async: true,
+    asyncEnvelope: "object", // [documented], as above
+    writes: true,
+    article: "26076336091933",
+    fixed: { "data-format": ["data_format", "failed_submission"] },
+    fields: {
+      // Note the type: base64 STRINGS here, where the from_template variant takes
+      // objects under the same Learnosity path. One keyword, typed per block — the same
+      // treatment `status` gets. The keyword mirrors the endpoint because a bare `data`
+      // would shadow L0000's, which mergeLexicon caught when it was first written.
+      "sessions-data": ["data", "strings", { maxEntries: 50 }],
+      "ignore-response-revisions": ["ignore_response_revisions", "boolean"],
     },
   },
 

@@ -91,6 +91,23 @@ than by declaring the key insufficient.
 **Depends on it:** the registry key stayed two-level. A third axis would have been carried by
 every block to serve one case.
 
+**Implemented 2026-08-17, and not the way this entry first suggested.** C3 proposed modelling the
+branch "as a variant inside the `(sessions, set)` block keyed on `data_format`". It is instead
+**one keyword per operation** — `sessions-set-from-template` and `sessions-set-failed-submission`
+— with the discriminant emitted by the block. Three reasons, and the first was decisive:
+
+- `data` is `array[object]` under one variant and `array[string]` under the other. A single
+  keyword meaning two types is precisely the hazard per-block field scoping exists to prevent;
+  it is the `status` problem again, and splitting is how that one is handled too.
+- Variant machinery would sit in every block's validation path to serve one documented case —
+  the same objection that kept the third axis out. This entry's own reasoning argued against it.
+- Splitting makes the discriminant unmissable: the author never writes `data_format`, so it
+  cannot be omitted or mismatched to the payload it selects.
+
+So the conclusion holds — no third registry axis — while the mechanism is simpler than proposed.
+The invariant is now "one keyword per OPERATION", where an operation is `(endpoint, action)` or,
+where the API branches on a value, `(endpoint, action, discriminant)`.
+
 ### C4 — Which operations are asynchronous · RESOLVED
 
 *Jobs - Endpoints* describes the `jobs` family as "Create long running Learnosity jobs", which

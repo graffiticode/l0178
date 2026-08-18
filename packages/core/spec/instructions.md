@@ -59,8 +59,10 @@ language.
 | `items-set` | `itembank/items` | `set` | no | — | no |
 | `items-tags-set` | `itembank/items/tags` | `set` | no | — | no |
 | `items-tags-update` | `itembank/items/tags` | `update` | no | — | no |
+| `sessions-set-from-template` | `sessions` | `set` | no | — | **yes** |
+| `sessions-set-failed-submission` | `sessions` | `set` | no | — | **yes** |
 
-Only these seven of the Data API's 57 operations are modelled. A request for any other —
+Only these nine of the Data API's 57 operations are modelled. A request for any other —
 writes, duplicates, `sessions/scores` — must be declined, not answered with the nearest
 built thing.
 
@@ -197,6 +199,26 @@ parameters for both actions without saying which is which.
 Note tags are WRITTEN as a list of TagsV2 records `[{type, name}]` but come back on a read
 as an object keyed by type — `{"probe": ["A", "B"]}`. The write shape is what this dialect
 expresses.
+
+## Submitting sessions — two operations behind one endpoint
+
+`sessions` + `set` is **two different operations**, chosen by `data_format`. Each has its own
+keyword, and the block emits the discriminant — you never write `data-format` yourself, so it
+cannot be omitted or contradict the payload it selects.
+
+| Block | `data_format` | `sessions-data` holds |
+| :---- | :------------ | :-------------------- |
+| `sessions-set-from-template` | `from_template` | records: `user-id`, `activity-id`, `session-id`, `responses` |
+| `sessions-set-failed-submission` | `failed_submission` | base64 strings; also takes `ignore-response-revisions` |
+
+Both write, both are asynchronous, and both take a maximum of 50 entries.
+
+Note `sessions-data` maps to the Learnosity path `data` in both, carrying a different TYPE in
+each — records in one, strings in the other. It is not called `data` because that is L0000's
+keyword; the dialect mirrors the endpoint rather than claiming the base word.
+
+**Neither is verified.** Exercising one means manufacturing session data, so the fields and the
+response shape are documented only.
 
 ## Polling an async operation
 

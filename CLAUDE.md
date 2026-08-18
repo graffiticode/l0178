@@ -37,12 +37,24 @@ job* (which endpoint, which action, what the request carries); L0178 validates i
 holes as steering warnings, and — via `get_spec` — returns a host-language-neutral developer
 recipe covering signing, paging, the response envelope, and verification.
 
-**Status: early.** Seven operations are modelled — `items-get`, `items-set`,
-`items-tags-set`, `items-tags-update`, `responses-get`, `jobs-get` and
-`offlinepackage-get`. Each was chosen to DISAGREE with what was already modelled, which
-is the only reason the traps below were found rather than assumed. The other 50 documented
+**Status: early.** Nine operations are modelled — `items-get`, `items-set`,
+`items-tags-set`, `items-tags-update`, `responses-get`, `jobs-get`,
+`offlinepackage-get`, and the two branched `sessions-set-*` submissions. Each was chosen to DISAGREE with what was already modelled, which
+is the only reason the traps below were found rather than assumed. The other 48 documented
 blocks are in `spec/coverage.md` and are unbuilt, not unsupported; an operation absent from
 the vocabulary must never be guessed at.
+
+### A keyword names an OPERATION
+
+Usually that is `(endpoint, action)`. Where the API branches on a field VALUE it is
+`(endpoint, action, discriminant)`: `sessions` + `set` is two operations selected by
+`data_format`, so it is two keywords, and `Block.fixed` emits the discriminant. The author
+never writes it, so it cannot be omitted or contradict the payload it selects.
+
+Splitting beat variant machinery because `data` is `array[object]` in one branch and
+`array[string]` in the other — one keyword meaning two types is the hazard per-block scoping
+exists to prevent — and because variant machinery would sit in every block's validation path
+to serve one documented case. See C3's follow-up.
 
 ### Credentials policy
 

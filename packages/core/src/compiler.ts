@@ -138,6 +138,10 @@ function validateProp(
     }
     return value;
   }
+  if (type === "boolean" && typeof value !== "boolean") {
+    pushWarn(options, `${name} must be true or false.`);
+    return value;
+  }
   if (type === "number") {
     if (typeof value !== "number") pushWarn(options, `${name} must be a number.`);
     else if (c?.max !== undefined && value > c.max) {
@@ -289,9 +293,16 @@ function finalize(rec: any, options: any): any {
         action: "get",
         // Where to read the reference from THIS endpoint's response. Verified to differ
         // per endpoint, so the recipe must be told rather than left to generalise.
-        job_reference_at: block.asyncEnvelope === "object"
-          ? "data.job_reference"
-          : "data[0].job_reference",
+        // Only stated when the block declares a shape. Guessing would be worse than
+        // silence: both forms are real, and a wrong one yields `undefined` and a poll
+        // that never finds its job.
+        ...(block.asyncEnvelope
+          ? {
+            job_reference_at: block.asyncEnvelope === "object"
+              ? "data.job_reference"
+              : "data[0].job_reference",
+          }
+          : {}),
       }
       : undefined,
     paging: top.paging,
@@ -368,6 +379,12 @@ for (const [name, spec] of Object.entries(BLOCKS)) {
         for (const el of elements) {
           if (!el || typeof el !== "object") continue;
           Object.assign(request, validateFields(el, spec.fields, name, options));
+        }
+        // Discriminant values the operation always sends. Recorded in `paths` like any
+        // other field so the recipe reproduces them verbatim.
+        for (const [k, [path, value]] of Object.entries(spec.fixed || {})) {
+          request[k] = value;
+          recordPath(options, k, path);
         }
         checkCoherence(spec, request, options);
         const cont = toPlainObject(v1) || {};

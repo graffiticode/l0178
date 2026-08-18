@@ -561,3 +561,68 @@ describe("write semantics differ BY ACTION on one endpoint", () => {
     expect(out.write_semantics).toBeUndefined();
   });
 });
+
+describe("discriminated operations — sessions + set, branched on data_format", () => {
+  test("each variant is its own keyword, and both report the same endpoint and action", async () => {
+    const ft = await compile(`data-job sessions-set-from-template [ sessions-data [{activity-id: "a"}] {} ] {}..`);
+    const fs = await compile(`data-job sessions-set-failed-submission [ sessions-data ["B64"] {} ] {}..`);
+    for (const out of [ft, fs]) {
+      expect(out.endpoint).toBe("sessions");
+      expect(out.action).toBe("set");
+      expect(out.async).toBe(true);
+      expect(out.writes).toBe(true);
+    }
+  });
+
+  test("the discriminant is emitted by the block, not authored", async () => {
+    // The author never writes data_format. The block chooses it, so it cannot be omitted
+    // or contradict the payload it selects — which is the whole point of splitting the
+    // keyword rather than adding variant machinery.
+    const ft = await compile(`data-job sessions-set-from-template [ sessions-data [{activity-id: "a"}] {} ] {}..`);
+    const fs = await compile(`data-job sessions-set-failed-submission [ sessions-data ["B64"] {} ] {}..`);
+    expect(ft.request["data-format"]).toBe("from_template");
+    expect(fs.request["data-format"]).toBe("failed_submission");
+    // ...and it is pathed like any other field, so the recipe reproduces it verbatim.
+    expect(ft.paths["data-format"]).toBe("data_format");
+    expect(fs.paths["data-format"]).toBe("data_format");
+  });
+
+  test("the same Learnosity path carries different TYPES per variant", async () => {
+    // `data` is array[object] under from_template and array[string] under
+    // failed_submission. Both map to the path "data"; only the block says which is legal.
+    const ft = await compile(`data-job sessions-set-from-template [ sessions-data [{activity-id: "a"}] {} ] {}..`);
+    const fs = await compile(`data-job sessions-set-failed-submission [ sessions-data ["B64"] {} ] {}..`);
+    expect(ft.paths["sessions-data"]).toBe("data");
+    expect(fs.paths["sessions-data"]).toBe("data");
+    expect(fs.request["sessions-data"]).toEqual(["B64"]);
+    expect(ft.request["sessions-data"][0]).toMatchObject({ "activity-id": "a" });
+  });
+
+  test("a field belonging to the other variant is dropped", async () => {
+    const out = await compile(`data-job sessions-set-from-template [
+      sessions-data [{activity-id: "a"}] ignore-response-revisions true {} ] {}..`);
+    expect(hasWarning(out, "isn't a request field of this operation")).toBe(true);
+    expect(out.request["ignore-response-revisions"]).toBeUndefined();
+  });
+
+  test("boolean fields are type-checked", async () => {
+    const out = await compile(`data-job sessions-set-failed-submission [
+      sessions-data ["B64"] ignore-response-revisions "yes" {} ] {}..`);
+    expect(hasWarning(out, "must be true or false")).toBe(true);
+  });
+
+  test("job_reference_at is only claimed where the shape is modelled", async () => {
+    // Both envelope forms are real, so guessing is worse than silence.
+    const fs = await compile(`data-job sessions-set-failed-submission [ sessions-data ["B64"] {} ] {}..`);
+    expect(fs.poll_with.job_reference_at).toBe("data.job_reference");
+  });
+});
+
+describe("the lexicon still shadows nothing", () => {
+  test("`data` stayed L0000's — the sessions payload mirrors its endpoint instead", async () => {
+    // mergeLexicon caught this when the field was first written as a bare `data`. The
+    // documented remedy is to mirror more of the path, never to claim an override.
+    expect(lexicon["data"]).toMatchObject({ arity: 1 });
+    expect(lexicon["sessions-data"]).toMatchObject({ arity: 2 });
+  });
+});
