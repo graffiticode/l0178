@@ -55,6 +55,22 @@ manufactured session data.
 That is a real gap, not a tidy one — say so rather than implying even coverage. Everything
 touching `itembank/*` and `jobs` IS verified.
 
+### The dialect is ATOMIC, and that has to be said in the prompt
+
+L0178 composes with nothing. The console records that as an absent `composesWith`, but that
+fence only governs PLANNER-proposed chains — the reactive path in `resolvers.ts` reads
+`data use "<lang>"` out of the generated program and honours it without consulting
+`composesWith` at all. So a generated program that asks for an upstream gets one.
+
+That happened: a write prompt led the generator to emit `data use "0176"`, and the request
+failed with "Upstream L0176 failed to produce a taskId". The trigger was a sentence in
+`instructions.md` — "content is composed in L0176" — which reads as a destination rather
+than a boundary.
+
+So `instructions.md` states atomicity outright and disarms every mention of L0176, and
+`spec-directive.test.ts` pins both. **Never write a scope note in a way that names another
+dialect without saying it is not to be called.**
+
 ### A keyword names an OPERATION
 
 Usually that is `(endpoint, action)`. Where the API branches on a field VALUE it is

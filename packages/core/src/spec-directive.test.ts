@@ -560,3 +560,27 @@ describe("examples.md covers the whole vocabulary", () => {
     expect(words[m![1]] ?? Number(m![1])).toBe(Object.keys(BLOCKS).length);
   });
 });
+
+/**
+ * L0178 is atomic. It has no `composesWith` entry in the console catalog, but that fence is
+ * only applied to PLANNER-proposed chains: the reactive path reads `data use "<lang>"` out of
+ * the generated program itself and honours it unfenced. So a generator that emits `data use
+ * "0176"` gets a composition regardless — which is exactly what happened, and it failed with
+ * "Upstream L0176 failed to produce a taskId".
+ *
+ * The instructions are therefore the only place this can be prevented, and the sentence that
+ * caused it ("content is composed in L0176") reads as a destination unless it is disarmed.
+ */
+describe("the dialect tells the generator it is atomic", () => {
+  test("emitting `data use` is forbidden in as many words", () => {
+    expect(has(instructions, "A program is ATOMIC")).toBe(true);
+    expect(has(instructions, 'NEVER emit `data use "<lang>"`')).toBe(true);
+    expect(has(instructions, "A program containing `data use` is malformed")).toBe(true);
+  });
+
+  test("the L0176 mentions are marked as scope, not as an upstream to call", () => {
+    // Both places the dialect names L0176 must say it is a boundary, not a destination.
+    expect(has(instructions, "it tells you what NOT to put in the recipe, not somewhere to go and get it")).toBe(true);
+    expect(has(instructions, 'never emit `data use "0176"`')).toBe(true);
+  });
+});

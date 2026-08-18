@@ -37,6 +37,13 @@ Uniform rules:
   `status ["published"]`. Writing one bare (`sort desc`) is an undefined reference, not a value.
 - **Request fields are arity-2 lowercase-kebab functions** — `name value` — that chain;
   a chain ends with `{}`.
+- **A program is ATOMIC. NEVER emit `data use "<lang>"`, and never reach for another
+  dialect.** L0178 describes how a caller moves data; it does not fetch or compose any.
+  Where these instructions say content "is composed in L0176", that is a statement about
+  whose job it is — it tells you what NOT to put in the recipe, not somewhere to go and
+  get it. A write's payload comes from the caller, already authored, and the recipe says
+  where to put it. A program containing `data use` is malformed no matter how the request
+  was phrased.
 - **Everything except the block and the paging policy is optional.** An unfiltered read is
   legal and warns that it reads the whole bank.
 - **An unknown property is a parse error**, not a warning. Warnings are reserved for
@@ -231,7 +238,10 @@ Three things to carry into any request that uses this block:
 - **`status` defaults to `unpublished`**, and an unpublished Item cannot be delivered. If a
   request wants the Item usable, it must say `status: "published"`.
 - **`definition` is required and carries item CONTENT**, which this dialect does not model.
-  It is passed through unchecked. Content is composed in L0176; this dialect moves it.
+  It is passed through unchecked — this dialect does not model item content and must not
+  attempt to produce any. The caller supplies it, already authored, from wherever their
+  content lives. (Composing Learnosity item JSON is L0176's job, which is a note about
+  scope, NOT an upstream to call: never emit `data use "0176"`.)
 
 ## Tagging Items — `items-tags-set` and `items-tags-update`
 

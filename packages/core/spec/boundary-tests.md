@@ -26,6 +26,16 @@ away rather than answered with the nearest thing — see `coverage.md`.
 6. Pull the score summary for every session in activity numeracy. *(sessions/scores — unbuilt; sessions/responses is the one modelled read)*
 7. Clear out every session from last school year in bank 386. *(sessions + delete IS built, but accepts ONE session per request and is scoped to right-to-be-forgotten deletions. Bulk cleanup is not this operation — Learnosity directs it to support. Decline rather than emitting a loop.)*
 
+## Must not produce a composition
+
+L0178 is atomic. These read as though content has to be authored first, which is what led a
+generated program to emit `data use "0176"` and the console to obey it — the reactive
+composition path does not consult `composesWith`. The correct output is a plain `data-job`
+that describes the write; the payload is the caller's to supply.
+
+1. Publish item alg-quad-3 into bank 386. *(a bare imperative — must still yield an atomic program, never `data use "0176"`)*
+2. Write a new multiple-choice item into bank 386 and make it live. *(authoring AND moving — the authoring half is not this dialect's, and is not an upstream to call)*
+
 ## Out of scope (should be redirected, not designed)
 
 8. Write me a multiple-choice question about photosynthesis with four options. *(item content → L0176)*
