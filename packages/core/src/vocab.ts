@@ -93,6 +93,11 @@ export type Block = {
   // a branched operation. Emitted into the request with their paths recorded, so the
   // author cannot omit one or contradict the payload it selects.
   fixed?: Record<string, [string, unknown]>;
+  // True when the operation DESTROYS data irreversibly. Declared per block rather than
+  // derived from `action === "delete"`, because this API has taught repeatedly that the
+  // verb does not predict behaviour (C19) — and a destructive operation is the last place
+  // to start inferring.
+  destructive?: boolean;
   // True when the operation PERSISTS. Drives the write-safety warnings, and is not the
   // same as `action !== "get"` — some `get` operations start jobs that mutate.
   writes?: boolean;
@@ -343,6 +348,25 @@ export const BLOCKS: Record<string, Block> = {
       "meta-user-firstname": ["meta.user.firstname", "string"],
       "meta-user-lastname": ["meta.user.lastname", "string"],
       "meta-user-email": ["meta.user.email", "string"],
+    },
+  },
+
+  // The only `delete` in the API, and the only block capped at ONE entry — every other
+  // batch allows 50. That cap is deliberate: Learnosity scopes this endpoint to
+  // right-to-be-forgotten requests and small deletions, and directs bulk cleanup to
+  // support instead. DOCUMENTED ONLY: firing it destroys a session irreversibly, and the
+  // sandbox holds sessions this project did not create.
+  "sessions-delete": {
+    endpoint: "sessions",
+    action: "delete",
+    paged: false,
+    async: true,
+    asyncEnvelope: "array", // [documented] — the article shows the array form
+    writes: true,
+    destructive: true,
+    article: "26076304588445",
+    fields: {
+      "session-ids": ["session_ids", "strings", { maxEntries: 1 }],
     },
   },
 

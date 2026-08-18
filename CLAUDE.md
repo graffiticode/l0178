@@ -37,12 +37,23 @@ job* (which endpoint, which action, what the request carries); L0178 validates i
 holes as steering warnings, and — via `get_spec` — returns a host-language-neutral developer
 recipe covering signing, paging, the response envelope, and verification.
 
-**Status: early.** Nine operations are modelled — `items-get`, `items-set`,
+**Status: early.** Ten operations are modelled — `items-get`, `items-set`,
 `items-tags-set`, `items-tags-update`, `responses-get`, `jobs-get`,
-`offlinepackage-get`, and the two branched `sessions-set-*` submissions. Each was chosen to DISAGREE with what was already modelled, which
-is the only reason the traps below were found rather than assumed. The other 48 documented
+`offlinepackage-get`, the two branched `sessions-set-*` submissions, and `sessions-delete`. Each was chosen to DISAGREE with what was already modelled, which
+is the only reason the traps below were found rather than assumed. The other 47 documented
 blocks are in `spec/coverage.md` and are unbuilt, not unsupported; an operation absent from
 the vocabulary must never be guessed at.
+
+### Verification has a limit, and it is deliberate
+
+`sessions-delete` is modelled from documentation and will stay that way. Exercising it
+destroys a session irreversibly, the sandbox holds sessions this project did not create,
+and manufacturing one to destroy means going through the unverified submission path. The
+two `sessions-set-*` blocks are unverified for the related reason that they need
+manufactured session data.
+
+That is a real gap, not a tidy one — say so rather than implying even coverage. Everything
+touching `itembank/*` and `jobs` IS verified.
 
 ### A keyword names an OPERATION
 

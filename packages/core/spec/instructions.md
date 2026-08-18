@@ -61,8 +61,9 @@ language.
 | `items-tags-update` | `itembank/items/tags` | `update` | no | — | no |
 | `sessions-set-from-template` | `sessions` | `set` | no | — | **yes** |
 | `sessions-set-failed-submission` | `sessions` | `set` | no | — | **yes** |
+| `sessions-delete` | `sessions` | `delete` | no | — | **yes** |
 
-Only these nine of the Data API's 57 operations are modelled. A request for any other —
+Only these ten of the Data API's 57 operations are modelled. A request for any other —
 writes, duplicates, `sessions/scores` — must be declined, not answered with the nearest
 built thing.
 
@@ -219,6 +220,22 @@ keyword; the dialect mirrors the endpoint rather than claiming the base word.
 
 **Neither is verified.** Exercising one means manufacturing session data, so the fields and the
 response shape are documented only.
+
+## Deleting a session — `sessions-delete`
+
+| Field | Learnosity path | Type |
+| :---- | :-------------- | :--- |
+| `session-ids` | `session_ids` | list of session ids — **maximum 1** |
+
+The only destructive operation in the dialect, and the only one capped at a single entry
+where every other batch allows 50. That cap is deliberate: Learnosity scopes this endpoint
+to right-to-be-forgotten requests and small deletions, and directs bulk cleanup to support.
+A request to "clear out last year's sessions" is not this operation, however much it looks
+like it.
+
+It is asynchronous, so it returns a job reference rather than a result — and there is
+nothing to re-read afterwards to see what went. **Documented only**: exercising it destroys
+a session irreversibly.
 
 ## Polling an async operation
 

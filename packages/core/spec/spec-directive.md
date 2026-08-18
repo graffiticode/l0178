@@ -52,6 +52,13 @@ Three details are binary and must be stated exactly:
 - Terminate on a **terminal status** — `completed` or `halted` — not on records appearing, and not on a fixed number of attempts.
 - Give the loop a backstop and name it: a poll that never sees a terminal status must fail loudly rather than spin, and the per-endpoint rate limit applies to the polling endpoint too.
 
+## Destructive operations
+**A required section whenever the compiled output has `destructive: true`, and it goes BEFORE the Procedure, not after it.**
+
+- **State that it cannot be undone, and that there is nothing to check afterwards.** A destructive job returns a job reference, not a result; the thing it removed is gone, so verification-after-the-fact does not exist for it. The check has to happen before the run: confirm the identifier names what the reader believes it names.
+- **Name the scope the API intends.** `sessions` + `delete` accepts ONE session per request, where every other batch in this API allows 50. That is deliberate — Learnosity scopes it to right-to-be-forgotten requests and small deletions and directs bulk cleanup to support. If the request reads like a cleanup ("clear last year's sessions"), say plainly that this operation is not it, rather than emitting a loop that calls it repeatedly.
+- **Do not soften it into a general write warning.** "Point it at a scratch bank first" is advice for a write that can be inspected and redone. It does not apply here, and offering it implies a safety net that is not there.
+
 ## Write safety
 **A required section whenever the compiled output has `writes: true`. Never fold it into the Procedure — a reader who skims past it loses data.**
 

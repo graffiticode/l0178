@@ -244,8 +244,16 @@ function finalize(rec: any, options: any): any {
     }
     // Write safety. Every hazard here is silent — the request succeeds and the damage
     // surfaces later — so these are advisories on a job that is otherwise correct.
+    if (block.destructive) {
+      // A delete gets its own warning, ahead of the generic write one: there is nothing
+      // to re-read afterwards and nothing to roll back to.
+      specificity.push(`This job DESTROYS data irreversibly. ${block.endpoint} + ${block.action} cannot be undone, the response carries only a job reference, and there is nothing to re-read afterwards to check what went. Confirm the target is what you mean BEFORE running it, not after.`);
+    }
     if (block.writes) {
-      specificity.push(`This job WRITES. ${block.endpoint} + ${block.action} persists to the Item bank, and the response does not echo what was written — re-read to confirm. Point it at a scratch bank until you have seen it do the right thing.`);
+      // "Item bank" is only right for itembank/* — sessions are not in one, and telling a
+      // reader to point a session write at a scratch BANK is advice they cannot follow.
+      const inBank = block.endpoint.startsWith("itembank/");
+      specificity.push(`This job WRITES. ${block.endpoint} + ${block.action} persists${inBank ? " to the Item bank" : ""}, and the response does not echo what was written — re-read to confirm.` + (inBank ? " Point it at a scratch bank until you have seen it do the right thing." : " Rehearse it against data you can afford to lose before pointing it at anything real."));
       // Which of the two semantics applies is measured per (endpoint, action), not implied
       // by the verb: on itembank/items/tags, `set` replaces the tag set and `update` merges
       // into it, and the reference documents identical parameters for both.

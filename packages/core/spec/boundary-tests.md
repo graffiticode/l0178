@@ -17,14 +17,14 @@ that carries no warning to explain it.
 
 ## Not built yet (should be declined, not designed)
 
-Only 5 of the Data API's 57 operations are modelled. A request for an unbuilt one must be turned
+Only 10 of the Data API's 57 operations are modelled. A request for an unbuilt one must be turned
 away rather than answered with the nearest thing — see `coverage.md`.
 
 3. Duplicate Items 1-50 from bank 4021 into bank 386. *(itembank/items/duplicate — unbuilt. Note itembank/items + set IS built; it is duplication that is missing.)*
 4. Duplicate activity unit-3-quiz into our sandbox bank. *(itembank/activities/duplicate — unbuilt)*
 5. Kick off a subscore recalculation for these sessions and poll it until it finishes. *(jobs/sessions/scores/subscores — unbuilt. Note the POLLING half is now built as `jobs-get`, and `offlinepackage-get` is a built async producer; it is this particular producer that is missing, so decline the recalculation rather than the polling.)*
 6. Pull the score summary for every session in activity numeracy. *(sessions/scores — unbuilt; sessions/responses is the one modelled read)*
-7. Delete session ef4f80b8-e281-41f4-9efd-349b7eb9dd37. *(sessions + delete — unbuilt, and a write)*
+7. Clear out every session from last school year in bank 386. *(sessions + delete IS built, but accepts ONE session per request and is scoped to right-to-be-forgotten deletions. Bulk cleanup is not this operation — Learnosity directs it to support. Decline rather than emitting a loop.)*
 
 ## Out of scope (should be redirected, not designed)
 

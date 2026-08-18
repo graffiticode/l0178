@@ -83,6 +83,31 @@ describe("the directive keeps paging as its own section", () => {
   });
 });
 
+describe("the directive gives destructive operations their own section", () => {
+  test("Destructive is required, and comes before the Procedure", () => {
+    expect(has(directive, "## Destructive operations")).toBe(true);
+    expect(has(directive, "destructive: true")).toBe(true);
+    expect(has(directive, "BEFORE the Procedure")).toBe(true);
+  });
+
+  test("it says there is nothing to verify afterwards", () => {
+    expect(has(directive, "cannot be undone")).toBe(true);
+    expect(has(directive, "verification-after-the-fact does not exist")).toBe(true);
+  });
+
+  test("it names the one-entry scope and refuses the bulk-cleanup reading", () => {
+    // The cap is the API's own signal about intent; a recipe that loops around it is
+    // defeating a deliberate constraint.
+    expect(has(directive, "ONE session per request")).toBe(true);
+    expect(has(directive, "right-to-be-forgotten")).toBe(true);
+    expect(has(directive, "rather than emitting a loop that calls it repeatedly")).toBe(true);
+  });
+
+  test("it refuses to reuse the scratch-bank advice, which implies a safety net", () => {
+    expect(has(directive, "implies a safety net that is not there")).toBe(true);
+  });
+});
+
 describe("the directive gives writes their own section", () => {
   test("Write safety is a required section when the job writes", () => {
     expect(has(directive, "## Write safety")).toBe(true);

@@ -6,7 +6,7 @@ the generator to produce examples organically; the programs they yield are the c
 
 They are phrased the way a developer actually asks — data they need out of a Learnosity bank, and
 what they intend to do about it — not as descriptions of the vocabulary. Between them they should
-reach every part of the modelled surface: all five blocks, every filter, the three session time axes,
+reach every part of the modelled surface: all ten blocks, every filter, the three session time axes,
 response shaping, both paging policies, and the asynchronous job shape.
 
 **Every prompt here must yield a program worth RETRIEVING.** A RAG row is a bare prompt-and-code
@@ -92,15 +92,23 @@ the bank, because writing to the wrong one is the mistake that cannot be undone.
 40. Rename item old-ref-7 to alg-quad-3 in bank 386.
 41. Write item bio-cell-4 into bank 386 tagged Subject: Biology and Grade: 9, published.
 
+## Deleting a session — `sessions-delete`
+
+One session per request, by design. A prompt that names a single session is this operation;
+a prompt that asks to clear many is not, and lives in `boundary-tests.md`.
+
+42. Delete session 88336e4c-04de-4274-ae31-39957b230f98 — we have a right-to-be-forgotten request.
+43. Remove the session data for 3f9a1c22-77bd-4e10-9a01-5c2e8b41d7e0 at the learner's request.
+
 ## Requests that raise an advisory warning
 
 Legitimate jobs the compiler accepts but wants to steer. The programs they yield are correct and
 worth retrieving; the warning is advisory and rides alongside, not a defect in the code.
 
-42. Get every Item that is NOT tagged Grade: 5 from bank 88.
-43. Fetch all Items whose workflow state is Approved.
-44. Read all the Items in the bank — no filter, just everything we have.
-45. Pull all the published Items — I don't know our bank id, just use the default one.
+44. Get every Item that is NOT tagged Grade: 5 from bank 88.
+45. Fetch all Items whose workflow state is Approved.
+46. Read all the Items in the bank — no filter, just everything we have.
+47. Pull all the published Items — I don't know our bank id, just use the default one.
 
 ## Under-specified requests (the compiler should flag the holes)
 
@@ -108,8 +116,8 @@ These withhold the reading intent on purpose — they are the counterpart to eve
 the programs they yield should carry holes, not an invented paging policy. Do not "fix" them by
 choosing exhaustive.
 
-46. Get the published Items from bank 123.
-47. I need the session responses for activity numeracy.
-48. Fetch Items tagged Subject: Science.
-49. Read the responses for user student_0001.
+48. Get the published Items from bank 123.
+49. I need the session responses for activity numeracy.
+50. Fetch Items tagged Subject: Science.
+51. Read the responses for user student_0001.
 

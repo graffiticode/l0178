@@ -17,7 +17,7 @@ envelope carries a `meta.versions` object. Both are in `instructions.md` marked 
 un-written tricks that make this dialect worth having are, by definition, absent from the
 documentation — this map tells you where to go looking, never what you will find there.
 
-**Coverage against this denominator: 9 of 57 blocks built**, all verified live:
+**Coverage against this denominator: 10 of 57 blocks built**, all verified live:
 
 | Block | Shape | Verified against |
 | :-- | :-- | :-- |
@@ -30,6 +30,7 @@ documentation — this map tells you where to go looking, never what you will fi
 | `itembank/items/tags` + `update` | **writes**; MERGES into the tag set | private consumer, sandbox 386 |
 | `sessions` + `set` (from_template) | **writes**, async; branched on `data_format` | documented only |
 | `sessions` + `set` (failed_submission) | **writes**, async; branched on `data_format` | documented only |
+| `sessions` + `delete` | **destructive**, async; capped at ONE entry | documented only, deliberately |
 
 Each was chosen to DISAGREE with what was already modelled, and each disagreement paid: the two
 paged blocks end their loops by opposite rules (C15); the documented `status` default on `jobs`

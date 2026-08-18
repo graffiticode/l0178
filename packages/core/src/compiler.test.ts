@@ -626,3 +626,52 @@ describe("the lexicon still shadows nothing", () => {
     expect(lexicon["sessions-data"]).toMatchObject({ arity: 2 });
   });
 });
+
+describe("sessions-delete — the only destructive operation", () => {
+  const DEL = `data-job sessions-delete [ session-ids ["88336e4c-04de-4274-ae31-39957b230f98"] {} ] {}..`;
+
+  test("it is a write, asynchronous, and not paged", async () => {
+    const out = await compile(DEL);
+    expect(out.endpoint).toBe("sessions");
+    expect(out.action).toBe("delete");
+    expect(out.writes).toBe(true);
+    expect(out.async).toBe(true);
+    expect(out.paged).toBe(false);
+    expect(out.poll_with.job_reference_at).toBe("data[0].job_reference");
+  });
+
+  test("it warns that it destroys, ahead of the generic write warning", async () => {
+    // There is nothing to re-read afterwards and nothing to roll back to, so the check
+    // has to happen before the run — which the generic write advisory does not say.
+    const out = await compile(DEL);
+    const i = out.warnings.findIndex((w: string) => /DESTROYS/.test(w));
+    const j = out.warnings.findIndex((w: string) => /This job WRITES/.test(w));
+    expect(i).toBeGreaterThanOrEqual(0);
+    expect(i).toBeLessThan(j);
+    expect(hasWarning(out, "cannot be undone")).toBe(true);
+    expect(hasWarning(out, "BEFORE running it")).toBe(true);
+  });
+
+  test("the one-entry cap is enforced", async () => {
+    // Every other batch in the API allows 50. This one allows ONE, deliberately —
+    // Learnosity scopes it to right-to-be-forgotten requests, not bulk cleanup.
+    const out = await compile(`data-job sessions-delete [ session-ids ["a" "b"] {} ] {}..`);
+    expect(hasWarning(out, "exceeds the documented maximum of 1")).toBe(true);
+  });
+
+  test("destructiveness is declared, not inferred from the verb", async () => {
+    // C19's lesson: the verb predicts nothing in this API. A non-delete write must not
+    // pick up the destructive warning.
+    const set = await compile(`data-job items-set [ items [{reference: "r", definition: {widgets: []}, status: "published"}] {} ] {}..`);
+    expect(hasWarning(set, "DESTROYS")).toBe(false);
+  });
+
+  test("write advice matches where the data actually lives", async () => {
+    // Sessions are not in an Item bank, so "point it at a scratch bank" is advice a
+    // reader cannot follow.
+    const del = await compile(DEL);
+    const set = await compile(`data-job items-set [ items [{reference: "r", definition: {widgets: []}, status: "published"}] {} ] {}..`);
+    expect(hasWarning(del, "scratch bank")).toBe(false);
+    expect(hasWarning(set, "scratch bank")).toBe(true);
+  });
+});
