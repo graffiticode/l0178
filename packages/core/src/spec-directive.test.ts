@@ -518,6 +518,30 @@ describe("instructions.md shows the form of enumerated values", () => {
  * updates landed while examples.md was updated only for the delete, leaving 6 of 18 blocks
  * represented. Nothing caught it because nothing was looking. This looks.
  */
+describe("the served catalog lists every block", () => {
+  // language-info.json is what get_language_info and the console read, so a block missing
+  // here is a block the outside world does not know exists. It fell 12 behind while
+  // examples.md and spec.md were guarded and this was not — the same drift, in the file
+  // that matters most for discovery.
+  const info = JSON.parse(readFileSync(
+    fileURLToPath(new URL("../spec/language-info.json", import.meta.url)), "utf-8"));
+  const scope = JSON.parse(readFileSync(
+    fileURLToPath(new URL("../spec/scope.json", import.meta.url)), "utf-8"));
+
+  test("supported_item_types is exactly the registry", () => {
+    expect([...info.supported_item_types].sort()).toEqual(Object.keys(BLOCKS).sort());
+  });
+
+  test("both status strings state the real block count", () => {
+    const n = Object.keys(BLOCKS).length;
+    for (const [name, status] of [["language-info", info.status], ["scope", scope.status]]) {
+      const m = String(status).match(/(\d+) of 57/);
+      expect(m, `${name}.status should say "N of 57"`).toBeTruthy();
+      expect(Number(m![1]), `${name}.status block count`).toBe(n);
+    }
+  });
+});
+
 describe("spec.md indexes every block", () => {
   const spec = readFileSync(
     fileURLToPath(new URL("../spec/spec.md", import.meta.url)), "utf-8",
